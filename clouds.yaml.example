@@ -1,0 +1,34 @@
+clouds:
+  openstack-one:
+    auth:
+      auth_url: https://OPENSTACK_ENDPOINT:5000/v3
+      username: YOUR_USERNAME
+      password: SET_LOCALLY
+      project_name: YOUR_PROJECT
+      user_domain_name: Default
+      project_domain_name: Default
+    region_name: RegionOne
+    interface: public
+    identity_api_version: 3
+  openstack-two:
+    auth:
+      auth_url: https://OPENSTACK_ENDPOINT_TWO:5000/v3
+      username: YOUR_USERNAME
+      password: SET_LOCALLY
+      project_name: YOUR_PROJECT
+      user_domain_name: Default
+      project_domain_name: Default
+    region_name: RegionOne
+    interface: public
+    identity_api_version: 3
+  openstack-three:
+    auth:
+      auth_url: https://OPENSTACK_ENDPOINT_THREE:5000/v3
+      username: YOUR_USERNAME
+      password: SET_LOCALLY
+      project_name: YOUR_PROJECT
+      user_domain_name: Default
+      project_domain_name: Default
+    region_name: RegionOne
+    interface: public
+    identity_api_version: 3

@@ -1,0 +1,2545 @@
+@prefix cto:  <https://3k1h.example.org/cto#> .
+@prefix kb:   <https://3k1h.example.org/kb#> .
+@prefix d3f:  <http://d3fend.mitre.org/ontologies/d3fend.owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# =====================================================================
+#  OpenStack 전용 매핑 v0.5 (Keystone · Nova · Neutron · Glance)
+#  generate: gen_mapping.py 로 생성. 직접 고칠 때는 gen_mapping.py 를 고치고 다시 생성 권장
+#
+#  검증 상태(cto:verificationStatus)
+#    공식문서확인   : 공식 문서/소스에서 직접 확인
+#    팀설계         : 팀의 설계 가정 (근거를 발표·보고서에 제시)
+#    실로그확인필요 : 우리 OpenStack 클러스터의 실제 로그로 확인 후 공식문서확인으로 변경
+#    명령확인필요   : openstack <명령> --help 로 확인 후 공식문서확인으로 변경
+#
+#  자동 생성되어 여기 쓰지 않는 것: ATT&CK 기법·전술·완화책·탐지전략·동시사용, D3FEND 매핑, OSSA/OSSN
+# =====================================================================
+
+# ---------------- 출처 문서
+
+kb:doc_keystone_notif a cto:SourceDocument ;
+    rdfs:label "Keystone Event Notifications" ;
+    cto:url "https://docs.openstack.org/keystone/latest/admin/event_notifications.html"^^xsd:anyURI .
+
+kb:doc_nova_notif a cto:SourceDocument ;
+    rdfs:label "Nova Notifications" ;
+    cto:url "https://docs.openstack.org/nova/latest/reference/notifications.html"^^xsd:anyURI .
+
+kb:doc_nova_samples a cto:SourceDocument ;
+    rdfs:label "Nova notification samples (doc/notification_samples)" ;
+    cto:url "https://opendev.org/openstack/nova/src/branch/master/doc/notification_samples"^^xsd:anyURI .
+
+kb:doc_neutron_notif a cto:SourceDocument ;
+    rdfs:label "Neutron Notification events" ;
+    cto:url "https://docs.openstack.org/neutron/latest/reference/notifications.html"^^xsd:anyURI .
+
+kb:doc_glance_notif a cto:SourceDocument ;
+    rdfs:label "Glance Notifications" ;
+    cto:url "https://docs.openstack.org/glance/latest/admin/notifications.html"^^xsd:anyURI .
+
+kb:doc_nova_keypair a cto:SourceDocument ;
+    rdfs:label "Nova keypair versioned notification (keypair.create/import/delete, KeypairPayload)" ;
+    cto:url "https://opendev.org/openstack/nova/commit/ad56be6d225ef67892ecd29c0fff0b197c01c43a"^^xsd:anyURI .
+
+kb:doc_audit_mw a cto:SourceDocument ;
+    rdfs:label "keystonemiddleware Audit middleware" ;
+    cto:url "https://docs.openstack.org/keystonemiddleware/latest/audit.html"^^xsd:anyURI .
+
+kb:doc_pycadf_taxonomy a cto:SourceDocument ;
+    rdfs:label "pyCADF cadftaxonomy (CADF action taxonomy)" ;
+    cto:url "https://docs.openstack.org/pycadf/latest/_modules/pycadf/cadftaxonomy.html"^^xsd:anyURI .
+
+kb:doc_pycadf_auditmap a cto:SourceDocument ;
+    rdfs:label "pyCADF api_audit_map.conf (nova/neutron)" ;
+    cto:url "https://opendev.org/openstack/pycadf"^^xsd:anyURI .
+
+kb:doc_osc a cto:SourceDocument ;
+    rdfs:label "python-openstackclient command reference" ;
+    cto:url "https://docs.openstack.org/python-openstackclient/latest/"^^xsd:anyURI .
+
+kb:doc_osc_help a cto:SourceDocument ;
+    rdfs:label "python-openstackclient 10.0.0 --help 출력으로 명령·인자 확인 (2026-09-27, 팀 VM)" ;
+    rdfs:comment "공식 명령 도구의 내장 도움말로 직접 확인한 기록"@ko .
+
+kb:doc_team_scenario a cto:SourceDocument ;
+    rdfs:label "3K1H 설계 문서 (팀)" ;
+    rdfs:comment "공식 문서가 아닌 팀 설계 가정. 발표·보고서에 설계 근거를 함께 제시"@ko .
+
+# ---------------- 서비스와 로그 채널
+
+kb:Keystone a cto:OpenStackService ;
+    rdfs:label "Keystone" ;
+    rdfs:comment "Identity 서비스"@ko .
+
+kb:Nova a cto:OpenStackService ;
+    rdfs:label "Nova" ;
+    rdfs:comment "Compute 서비스"@ko .
+
+kb:Neutron a cto:OpenStackService ;
+    rdfs:label "Neutron" ;
+    rdfs:comment "Networking 서비스"@ko .
+
+kb:Glance a cto:OpenStackService ;
+    rdfs:label "Glance" ;
+    rdfs:comment "Image 서비스"@ko .
+
+kb:ch_keystone_cadf a cto:LogChannel ;
+    rdfs:label "Keystone CADF 알림"@ko ;
+    rdfs:comment "keystone.conf: notification_format = cadf. 인증 이벤트는 기본 억제(notification_opt_out 조정 필요)"@ko ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ch_nova_versioned a cto:LogChannel ;
+    rdfs:label "Nova versioned 알림"@ko ;
+    rdfs:comment "nova.conf [notifications] notification_format = versioned 로 고정 권장(필드 경로가 versioned 기준)"@ko ;
+    cto:derivedFrom kb:doc_nova_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ch_neutron_notif a cto:LogChannel ;
+    rdfs:label "Neutron 알림"@ko ;
+    rdfs:comment "legacy(unversioned) 알림. payload는 API 리소스 스키마. 요청 사용자 정보 없음 → audit 로그와 연결 필요"@ko ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ch_glance_notif a cto:LogChannel ;
+    rdfs:label "Glance 알림"@ko ;
+    rdfs:comment "glance 알림 driver 기본값은 noop(알림 없음) → 설정 필수. 이미지 생성·변경 이벤트의 필드 목록은 문서에 없음(실로그 확인)"@ko ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ch_audit a cto:LogChannel ;
+    rdfs:label "keystonemiddleware audit (CADF)"@ko ;
+    rdfs:comment "각 서비스 api-paste.ini 에 audit 필터 추가. 모든 API 요청을 CADF로 기록. 이벤트 이름·필드는 실로그 확인 필요"@ko ;
+    cto:derivedFrom kb:doc_audit_mw ;
+    cto:verificationStatus "실로그확인필요" .
+
+# ---------------- 행위 유형 (CADF)
+
+kb:act_create a cto:ActionType ;
+    rdfs:label "create" ;
+    cto:cadfAction "create" ;
+    cto:derivedFrom kb:doc_pycadf_taxonomy ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:act_read a cto:ActionType ;
+    rdfs:label "read" ;
+    cto:cadfAction "read" ;
+    cto:derivedFrom kb:doc_pycadf_taxonomy ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:act_read_list a cto:ActionType ;
+    rdfs:label "read/list" ;
+    cto:cadfAction "read/list" ;
+    cto:derivedFrom kb:doc_pycadf_taxonomy ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:act_update a cto:ActionType ;
+    rdfs:label "update" ;
+    cto:cadfAction "update" ;
+    cto:derivedFrom kb:doc_pycadf_taxonomy ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:act_delete a cto:ActionType ;
+    rdfs:label "delete" ;
+    cto:cadfAction "delete" ;
+    cto:derivedFrom kb:doc_pycadf_taxonomy ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:act_authenticate a cto:ActionType ;
+    rdfs:label "authenticate" ;
+    cto:cadfAction "authenticate" ;
+    cto:derivedFrom kb:doc_pycadf_taxonomy ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:act_start a cto:ActionType ;
+    rdfs:label "start" ;
+    cto:cadfAction "start" ;
+    cto:derivedFrom kb:doc_pycadf_taxonomy ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:act_stop a cto:ActionType ;
+    rdfs:label "stop" ;
+    cto:cadfAction "stop" ;
+    cto:derivedFrom kb:doc_pycadf_taxonomy ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:act_enable a cto:ActionType ;
+    rdfs:label "enable" ;
+    cto:cadfAction "enable" ;
+    cto:derivedFrom kb:doc_pycadf_taxonomy ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:act_disable a cto:ActionType ;
+    rdfs:label "disable" ;
+    cto:cadfAction "disable" ;
+    cto:derivedFrom kb:doc_pycadf_taxonomy ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:act_send a cto:ActionType ;
+    rdfs:label "send" ;
+    cto:cadfAction "send" ;
+    cto:derivedFrom kb:doc_pycadf_taxonomy ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:act_capture a cto:ActionType ;
+    rdfs:label "capture" ;
+    cto:cadfAction "capture" ;
+    cto:derivedFrom kb:doc_pycadf_taxonomy ;
+    cto:verificationStatus "공식문서확인" .
+
+# ---------------- 자원 유형
+
+kb:res_user a cto:ResourceType ;
+    rdfs:label "사용자"@ko ;
+    cto:providedBy kb:Keystone ;
+    cto:apiResourceName "user" ;
+    cto:sensitivity "high" ;
+    cto:typeURI "data/security/account/user" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_role_assignment a cto:ResourceType ;
+    rdfs:label "역할 할당"@ko ;
+    cto:providedBy kb:Keystone ;
+    cto:apiResourceName "role_assignment" ;
+    cto:sensitivity "high" ;
+    cto:typeURI "data/security/account/user" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_role a cto:ResourceType ;
+    rdfs:label "역할 정의"@ko ;
+    cto:providedBy kb:Keystone ;
+    cto:apiResourceName "role" ;
+    cto:sensitivity "high" ;
+    cto:typeURI "data/security/role" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_trust a cto:ResourceType ;
+    rdfs:label "위임(trust)"@ko ;
+    cto:providedBy kb:Keystone ;
+    cto:apiResourceName "trust" ;
+    cto:sensitivity "high" ;
+    cto:typeURI "data/security/trust" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_policy a cto:ResourceType ;
+    rdfs:label "정책"@ko ;
+    cto:providedBy kb:Keystone ;
+    cto:apiResourceName "policy" ;
+    cto:sensitivity "high" ;
+    cto:typeURI "data/security/policy" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_endpoint a cto:ResourceType ;
+    rdfs:label "엔드포인트"@ko ;
+    cto:providedBy kb:Keystone ;
+    cto:apiResourceName "endpoint" ;
+    cto:sensitivity "high" ;
+    cto:typeURI "data/security/endpoint" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_service a cto:ResourceType ;
+    rdfs:label "서비스 카탈로그"@ko ;
+    cto:providedBy kb:Keystone ;
+    cto:apiResourceName "service" ;
+    cto:sensitivity "high" ;
+    cto:typeURI "data/security/service" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_domain a cto:ResourceType ;
+    rdfs:label "도메인"@ko ;
+    cto:providedBy kb:Keystone ;
+    cto:apiResourceName "domain" ;
+    cto:sensitivity "high" ;
+    cto:typeURI "data/security/domain" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_region a cto:ResourceType ;
+    rdfs:label "리전"@ko ;
+    cto:providedBy kb:Keystone ;
+    cto:apiResourceName "region" ;
+    cto:sensitivity "medium" ;
+    cto:typeURI "data/security/region" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_project a cto:ResourceType ;
+    rdfs:label "프로젝트"@ko ;
+    cto:providedBy kb:Keystone ;
+    cto:apiResourceName "project" ;
+    cto:sensitivity "medium" ;
+    cto:typeURI "data/security/project" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_group a cto:ResourceType ;
+    rdfs:label "그룹"@ko ;
+    cto:providedBy kb:Keystone ;
+    cto:apiResourceName "group" ;
+    cto:sensitivity "medium" ;
+    cto:typeURI "data/security/group" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_instance a cto:ResourceType ;
+    rdfs:label "인스턴스"@ko ;
+    cto:providedBy kb:Nova ;
+    cto:apiResourceName "instance" ;
+    cto:sensitivity "medium" ;
+    cto:derivedFrom kb:doc_nova_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_keypair a cto:ResourceType ;
+    rdfs:label "키페어"@ko ;
+    cto:providedBy kb:Nova ;
+    cto:apiResourceName "keypair" ;
+    cto:sensitivity "high" ;
+    cto:derivedFrom kb:doc_nova_keypair ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_image a cto:ResourceType ;
+    rdfs:label "이미지"@ko ;
+    cto:providedBy kb:Glance ;
+    cto:apiResourceName "image" ;
+    cto:sensitivity "high" ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_image_member a cto:ResourceType ;
+    rdfs:label "이미지 공유"@ko ;
+    cto:providedBy kb:Glance ;
+    cto:apiResourceName "image_member" ;
+    cto:sensitivity "high" ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_security_group_rule a cto:ResourceType ;
+    rdfs:label "보안그룹 규칙"@ko ;
+    cto:providedBy kb:Neutron ;
+    cto:apiResourceName "security_group_rule" ;
+    cto:sensitivity "high" ;
+    cto:typeURI "service/network" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_security_group a cto:ResourceType ;
+    rdfs:label "보안그룹"@ko ;
+    cto:providedBy kb:Neutron ;
+    cto:apiResourceName "security_group" ;
+    cto:sensitivity "high" ;
+    cto:typeURI "service/network" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_floatingip a cto:ResourceType ;
+    rdfs:label "Floating IP"@ko ;
+    cto:providedBy kb:Neutron ;
+    cto:apiResourceName "floatingip" ;
+    cto:sensitivity "high" ;
+    cto:typeURI "service/network" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_port a cto:ResourceType ;
+    rdfs:label "포트"@ko ;
+    cto:providedBy kb:Neutron ;
+    cto:apiResourceName "port" ;
+    cto:sensitivity "medium" ;
+    cto:typeURI "service/network" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_router a cto:ResourceType ;
+    rdfs:label "라우터"@ko ;
+    cto:providedBy kb:Neutron ;
+    cto:apiResourceName "router" ;
+    cto:sensitivity "medium" ;
+    cto:typeURI "service/network" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_network a cto:ResourceType ;
+    rdfs:label "네트워크"@ko ;
+    cto:providedBy kb:Neutron ;
+    cto:apiResourceName "network" ;
+    cto:sensitivity "low" ;
+    cto:typeURI "service/network" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:res_subnet a cto:ResourceType ;
+    rdfs:label "서브넷"@ko ;
+    cto:providedBy kb:Neutron ;
+    cto:apiResourceName "subnet" ;
+    cto:sensitivity "low" ;
+    cto:typeURI "service/network" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+# ---------------- 로그 필드
+
+kb:f_ks_initiator_id a cto:LogField ;
+    rdfs:label "행위자 사용자 ID"@ko ;
+    cto:fieldPath "payload.initiator.id" ;
+    cto:refersTo kb:res_user ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_initiator_user_id a cto:LogField ;
+    rdfs:label "행위자 user_id"@ko ;
+    cto:fieldPath "payload.initiator.user_id" ;
+    cto:refersTo kb:res_user ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_initiator_username a cto:LogField ;
+    rdfs:label "행위자 사용자명"@ko ;
+    cto:fieldPath "payload.initiator.username" ;
+    rdfs:comment "최신 문서 예시(2025)에 있음. 구버전 Keystone 에서는 없을 수 있음"@ko ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_src_ip a cto:LogField ;
+    rdfs:label "출발지 IP"@ko ;
+    cto:fieldPath "payload.initiator.host.address" ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_agent a cto:LogField ;
+    rdfs:label "클라이언트 에이전트"@ko ;
+    cto:fieldPath "payload.initiator.host.agent" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_request_id a cto:LogField ;
+    rdfs:label "요청 ID"@ko ;
+    cto:fieldPath "payload.initiator.request_id" ;
+    rdfs:comment "최신 문서 예시(2025)에 있음. 구버전 Keystone 에서는 없을 수 있음"@ko ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_action a cto:LogField ;
+    rdfs:label "CADF 행위"@ko ;
+    cto:fieldPath "payload.action" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_outcome a cto:LogField ;
+    rdfs:label "결과"@ko ;
+    cto:fieldPath "payload.outcome" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_target_id a cto:LogField ;
+    rdfs:label "대상 ID"@ko ;
+    cto:fieldPath "payload.target.id" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_target_type a cto:LogField ;
+    rdfs:label "대상 typeURI"@ko ;
+    cto:fieldPath "payload.target.typeURI" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_resource_info a cto:LogField ;
+    rdfs:label "생성·변경된 자원 ID"@ko ;
+    cto:fieldPath "payload.resource_info" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_reason_code a cto:LogField ;
+    rdfs:label "사유 코드"@ko ;
+    cto:fieldPath "payload.reason.reasonCode" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_pw_hash a cto:LogField ;
+    rdfs:label "비밀번호 부분 해시"@ko ;
+    cto:fieldPath "payload.attachments[name=partial_password_hash].content" ;
+    rdfs:comment "Keystone 2025.1 이후 기능(report_invalid_password_hash). 이전 버전이면 필드가 없음 → 무차별 대입 규칙은 건수만으로 판단"@ko ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_ra_role a cto:LogField ;
+    rdfs:label "할당 역할 ID"@ko ;
+    cto:fieldPath "payload.role" ;
+    cto:refersTo kb:res_role ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_ra_project a cto:LogField ;
+    rdfs:label "할당 대상 프로젝트"@ko ;
+    cto:fieldPath "payload.project" ;
+    cto:refersTo kb:res_project ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_ra_domain a cto:LogField ;
+    rdfs:label "할당 대상 도메인"@ko ;
+    cto:fieldPath "payload.domain" ;
+    cto:refersTo kb:res_domain ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_ra_user a cto:LogField ;
+    rdfs:label "역할 받은 사용자"@ko ;
+    cto:fieldPath "payload.user" ;
+    cto:refersTo kb:res_user ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_ra_group a cto:LogField ;
+    rdfs:label "역할 받은 그룹"@ko ;
+    cto:fieldPath "payload.group" ;
+    cto:refersTo kb:res_group ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_uuid a cto:LogField ;
+    rdfs:label "인스턴스 ID"@ko ;
+    cto:fieldPath "payload.nova_object.data.uuid" ;
+    cto:refersTo kb:res_instance ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_user a cto:LogField ;
+    rdfs:label "요청 사용자 ID"@ko ;
+    cto:fieldPath "payload.nova_object.data.user_id" ;
+    cto:refersTo kb:res_user ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_tenant a cto:LogField ;
+    rdfs:label "프로젝트 ID"@ko ;
+    cto:fieldPath "payload.nova_object.data.tenant_id" ;
+    cto:refersTo kb:res_project ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_host a cto:LogField ;
+    rdfs:label "컴퓨트 호스트"@ko ;
+    cto:fieldPath "payload.nova_object.data.host" ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_image a cto:LogField ;
+    rdfs:label "이미지 ID"@ko ;
+    cto:fieldPath "payload.nova_object.data.image_uuid" ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_flavor a cto:LogField ;
+    rdfs:label "사양 이름"@ko ;
+    cto:fieldPath "payload.nova_object.data.flavor.nova_object.data.name" ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_vcpus a cto:LogField ;
+    rdfs:label "vCPU 수"@ko ;
+    cto:fieldPath "payload.nova_object.data.flavor.nova_object.data.vcpus" ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_port a cto:LogField ;
+    rdfs:label "연결 포트 ID"@ko ;
+    cto:fieldPath "payload.nova_object.data.ip_addresses[].nova_object.data.port_uuid" ;
+    cto:refersTo kb:res_port ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_ip a cto:LogField ;
+    rdfs:label "고정 IP"@ko ;
+    cto:fieldPath "payload.nova_object.data.ip_addresses[].nova_object.data.address" ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_key_name a cto:LogField ;
+    rdfs:label "키페어 이름"@ko ;
+    cto:fieldPath "payload.nova_object.data.key_name" ;
+    cto:refersTo kb:res_keypair ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "실로그확인필요" .
+
+kb:f_nt_sgr_id a cto:LogField ;
+    rdfs:label "보안그룹 규칙 ID"@ko ;
+    cto:fieldPath "payload.security_group_rule.id" , "payload.security_group_rule_id" ;
+    cto:refersTo kb:res_security_group_rule ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_sgr_sg a cto:LogField ;
+    rdfs:label "소속 보안그룹 ID"@ko ;
+    cto:fieldPath "payload.security_group_rule.security_group_id" ;
+    cto:refersTo kb:res_security_group ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_sgr_remote_ip a cto:LogField ;
+    rdfs:label "허용 대상 IP 대역"@ko ;
+    cto:fieldPath "payload.security_group_rule.remote_ip_prefix" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_sgr_remote_group a cto:LogField ;
+    rdfs:label "허용 대상 보안그룹"@ko ;
+    cto:fieldPath "payload.security_group_rule.remote_group_id" ;
+    cto:refersTo kb:res_security_group ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_sgr_direction a cto:LogField ;
+    rdfs:label "방향"@ko ;
+    cto:fieldPath "payload.security_group_rule.direction" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_sgr_protocol a cto:LogField ;
+    rdfs:label "프로토콜"@ko ;
+    cto:fieldPath "payload.security_group_rule.protocol" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_sgr_port_min a cto:LogField ;
+    rdfs:label "시작 포트"@ko ;
+    cto:fieldPath "payload.security_group_rule.port_range_min" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_sgr_port_max a cto:LogField ;
+    rdfs:label "끝 포트"@ko ;
+    cto:fieldPath "payload.security_group_rule.port_range_max" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_sgr_project a cto:LogField ;
+    rdfs:label "프로젝트 ID"@ko ;
+    cto:fieldPath "payload.security_group_rule.project_id" ;
+    cto:refersTo kb:res_project ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_fip_id a cto:LogField ;
+    rdfs:label "Floating IP ID"@ko ;
+    cto:fieldPath "payload.floatingip.id" , "payload.floatingip_id" ;
+    cto:refersTo kb:res_floatingip ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_fip_port a cto:LogField ;
+    rdfs:label "Floating IP 연결 포트"@ko ;
+    cto:fieldPath "payload.floatingip.port_id" ;
+    cto:refersTo kb:res_port ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_fip_addr a cto:LogField ;
+    rdfs:label "Floating IP 주소"@ko ;
+    cto:fieldPath "payload.floatingip.floating_ip_address" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_fip_project a cto:LogField ;
+    rdfs:label "프로젝트 ID"@ko ;
+    cto:fieldPath "payload.floatingip.project_id" ;
+    cto:refersTo kb:res_project ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_port_id a cto:LogField ;
+    rdfs:label "포트 ID"@ko ;
+    cto:fieldPath "payload.port.id" , "payload.port_id" ;
+    cto:refersTo kb:res_port ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_port_device a cto:LogField ;
+    rdfs:label "포트가 붙은 장치(인스턴스) ID"@ko ;
+    cto:fieldPath "payload.port.device_id" ;
+    cto:refersTo kb:res_instance ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_port_owner a cto:LogField ;
+    rdfs:label "장치 소유 유형"@ko ;
+    cto:fieldPath "payload.port.device_owner" ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nt_port_sgs a cto:LogField ;
+    rdfs:label "포트 적용 보안그룹"@ko ;
+    cto:fieldPath "payload.port.security_groups" ;
+    cto:refersTo kb:res_security_group ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "실로그확인필요" .
+
+kb:f_nt_port_project a cto:LogField ;
+    rdfs:label "프로젝트 ID"@ko ;
+    cto:fieldPath "payload.port.project_id" ;
+    cto:refersTo kb:res_project ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_kp_user a cto:LogField ;
+    rdfs:label "키페어 소유 사용자"@ko ;
+    cto:fieldPath "payload.nova_object.data.user_id" ;
+    cto:refersTo kb:res_user ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_nova_keypair ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_kp_name a cto:LogField ;
+    rdfs:label "키페어 이름"@ko ;
+    cto:fieldPath "payload.nova_object.data.name" ;
+    cto:refersTo kb:res_keypair ;
+    cto:derivedFrom kb:doc_nova_keypair ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_kp_fp a cto:LogField ;
+    rdfs:label "키 지문"@ko ;
+    cto:fieldPath "payload.nova_object.data.fingerprint" ;
+    cto:derivedFrom kb:doc_nova_keypair ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_nova_kp_type a cto:LogField ;
+    rdfs:label "키 유형"@ko ;
+    cto:fieldPath "payload.nova_object.data.type" ;
+    cto:derivedFrom kb:doc_nova_keypair ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_gl_image_id a cto:LogField ;
+    rdfs:label "이미지 ID"@ko ;
+    cto:fieldPath "payload.image_id" ;
+    cto:refersTo kb:res_image ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_gl_owner a cto:LogField ;
+    rdfs:label "이미지 소유자(프로젝트 또는 사용자)"@ko ;
+    cto:fieldPath "payload.owner_id" ;
+    cto:refersTo kb:res_project ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_gl_recv_tenant a cto:LogField ;
+    rdfs:label "받는 쪽 프로젝트"@ko ;
+    cto:fieldPath "payload.receiver_tenant_id" ;
+    cto:refersTo kb:res_project ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_gl_recv_user a cto:LogField ;
+    rdfs:label "받는 쪽 사용자"@ko ;
+    cto:fieldPath "payload.receiver_user_id" ;
+    cto:refersTo kb:res_user ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_gl_dest_ip a cto:LogField ;
+    rdfs:label "받는 쪽 IP"@ko ;
+    cto:fieldPath "payload.destination_ip" ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_gl_bytes a cto:LogField ;
+    rdfs:label "전송 바이트"@ko ;
+    cto:fieldPath "payload.bytes_sent" ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_gl_member_id a cto:LogField ;
+    rdfs:label "공유받은 프로젝트"@ko ;
+    cto:fieldPath "payload.member_id" ;
+    cto:refersTo kb:res_project ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_gl_member_status a cto:LogField ;
+    rdfs:label "공유 상태"@ko ;
+    cto:fieldPath "payload.status" ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_cred_type a cto:LogField ;
+    rdfs:label "연동 인증 유형(SAML 등)"@ko ;
+    cto:fieldPath "payload.initiator.credential.type" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_cred_idp a cto:LogField ;
+    rdfs:label "ID 제공자"@ko ;
+    cto:fieldPath "payload.initiator.credential.identity_provider" ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ks_cred_groups a cto:LogField ;
+    rdfs:label "연동 그룹"@ko ;
+    cto:fieldPath "payload.initiator.credential.groups" ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:f_ctx_user a cto:LogField ;
+    rdfs:label "요청 사용자 ID(컨텍스트)"@ko ;
+    cto:fieldPath "_context_user_id" ;
+    cto:refersTo kb:res_user ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "실로그확인필요" .
+
+kb:f_ctx_project a cto:LogField ;
+    rdfs:label "요청 프로젝트 ID(컨텍스트)"@ko ;
+    cto:fieldPath "_context_project_id" , "_context_tenant_id" ;
+    cto:refersTo kb:res_project ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "실로그확인필요" .
+
+kb:f_ctx_request_id a cto:LogField ;
+    rdfs:label "요청 ID(컨텍스트)"@ko ;
+    cto:fieldPath "_context_request_id" ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "실로그확인필요" .
+
+# ---------------- 행위 분류 (행위 × 자원, 팀설계. 점수는 초기값)
+
+kb:bc_auth_failure a cto:BehaviorClass ;
+    rdfs:label "인증 실패"@ko ;
+    cto:matchesAction kb:act_authenticate ;
+    cto:matchesResourceType kb:res_user ;
+    cto:matchesOutcome "failure" ;
+    cto:riskScore 3 ;
+    cto:suggestsTechnique kb:T1110 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_auth_success a cto:BehaviorClass ;
+    rdfs:label "인증 성공"@ko ;
+    cto:matchesAction kb:act_authenticate ;
+    cto:matchesResourceType kb:res_user ;
+    cto:matchesOutcome "success" ;
+    cto:riskScore 1 ;
+    cto:suggestsTechnique kb:T1078_004 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_privilege_grant a cto:BehaviorClass ;
+    rdfs:label "권한 부여"@ko ;
+    cto:matchesAction kb:act_create ;
+    cto:matchesResourceType kb:res_role_assignment ;
+    cto:riskScore 20 ;
+    cto:suggestsTechnique kb:T1098_003 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_privilege_revoke a cto:BehaviorClass ;
+    rdfs:label "권한 회수"@ko ;
+    cto:matchesAction kb:act_delete ;
+    cto:matchesResourceType kb:res_role_assignment ;
+    cto:riskScore 10 ;
+    cto:suggestsTechnique kb:T1531 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_account_create a cto:BehaviorClass ;
+    rdfs:label "계정 생성"@ko ;
+    cto:matchesAction kb:act_create ;
+    cto:matchesResourceType kb:res_user ;
+    cto:riskScore 15 ;
+    cto:suggestsTechnique kb:T1136_003 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_account_modify a cto:BehaviorClass ;
+    rdfs:label "계정 변경"@ko ;
+    cto:matchesAction kb:act_update ;
+    cto:matchesResourceType kb:res_user ;
+    cto:riskScore 10 ;
+    cto:suggestsTechnique kb:T1098 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_account_delete a cto:BehaviorClass ;
+    rdfs:label "계정 삭제"@ko ;
+    cto:matchesAction kb:act_delete ;
+    cto:matchesResourceType kb:res_user ;
+    cto:riskScore 10 ;
+    cto:suggestsTechnique kb:T1531 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_delegation a cto:BehaviorClass ;
+    rdfs:label "권한 위임 생성·삭제"@ko ;
+    cto:matchesAction kb:act_create , kb:act_delete ;
+    cto:matchesResourceType kb:res_trust ;
+    cto:riskScore 15 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_identity_infra_change a cto:BehaviorClass ;
+    rdfs:label "인증 인프라 설정 변경"@ko ;
+    cto:matchesAction kb:act_create , kb:act_update , kb:act_delete ;
+    cto:matchesResourceType kb:res_policy , kb:res_endpoint , kb:res_service , kb:res_domain , kb:res_region , kb:res_role ;
+    cto:riskScore 25 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_tenant_change a cto:BehaviorClass ;
+    rdfs:label "프로젝트·그룹 변경"@ko ;
+    cto:matchesAction kb:act_create , kb:act_update , kb:act_delete ;
+    cto:matchesResourceType kb:res_project , kb:res_group ;
+    cto:riskScore 5 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_compute_create a cto:BehaviorClass ;
+    rdfs:label "인스턴스 생성"@ko ;
+    cto:matchesAction kb:act_create ;
+    cto:matchesResourceType kb:res_instance ;
+    cto:riskScore 3 ;
+    cto:suggestsTechnique kb:T1578_002 , kb:T1496_001 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_compute_delete a cto:BehaviorClass ;
+    rdfs:label "인스턴스 삭제"@ko ;
+    cto:matchesAction kb:act_delete ;
+    cto:matchesResourceType kb:res_instance ;
+    cto:riskScore 3 ;
+    cto:suggestsTechnique kb:T1578_003 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_compute_state a cto:BehaviorClass ;
+    rdfs:label "인스턴스 정지"@ko ;
+    cto:matchesAction kb:act_stop ;
+    cto:matchesResourceType kb:res_instance ;
+    cto:riskScore 2 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_credential_add a cto:BehaviorClass ;
+    rdfs:label "키페어 등록"@ko ;
+    cto:matchesAction kb:act_create ;
+    cto:matchesResourceType kb:res_keypair ;
+    cto:riskScore 10 ;
+    cto:suggestsTechnique kb:T1098_001 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_credential_remove a cto:BehaviorClass ;
+    rdfs:label "키페어 삭제"@ko ;
+    cto:matchesAction kb:act_delete ;
+    cto:matchesResourceType kb:res_keypair ;
+    cto:riskScore 2 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_snapshot_create a cto:BehaviorClass ;
+    rdfs:label "스냅샷 생성"@ko ;
+    cto:matchesAction kb:act_capture ;
+    cto:matchesResourceType kb:res_instance ;
+    cto:riskScore 10 ;
+    cto:suggestsTechnique kb:T1578_001 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_compute_start a cto:BehaviorClass ;
+    rdfs:label "인스턴스 시작·재개"@ko ;
+    cto:matchesAction kb:act_start ;
+    cto:matchesResourceType kb:res_instance ;
+    cto:riskScore 1 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_compute_modify a cto:BehaviorClass ;
+    rdfs:label "인스턴스 크기 변경"@ko ;
+    cto:matchesAction kb:act_update ;
+    cto:matchesResourceType kb:res_instance ;
+    cto:riskScore 2 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_image_register a cto:BehaviorClass ;
+    rdfs:label "이미지 등록·변경"@ko ;
+    cto:matchesAction kb:act_create , kb:act_update ;
+    cto:matchesResourceType kb:res_image ;
+    cto:riskScore 5 ;
+    cto:suggestsTechnique kb:T1525 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_image_delete a cto:BehaviorClass ;
+    rdfs:label "이미지 삭제"@ko ;
+    cto:matchesAction kb:act_delete ;
+    cto:matchesResourceType kb:res_image ;
+    cto:riskScore 5 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_image_transfer a cto:BehaviorClass ;
+    rdfs:label "이미지 전송"@ko ;
+    cto:matchesAction kb:act_send ;
+    cto:matchesResourceType kb:res_image ;
+    cto:riskScore 3 ;
+    cto:suggestsTechnique kb:T1537 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_image_share a cto:BehaviorClass ;
+    rdfs:label "이미지 공유"@ko ;
+    cto:matchesAction kb:act_create ;
+    cto:matchesResourceType kb:res_image_member ;
+    cto:riskScore 20 ;
+    cto:suggestsTechnique kb:T1537 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_image_share_change a cto:BehaviorClass ;
+    rdfs:label "이미지 공유 변경·해제"@ko ;
+    cto:matchesAction kb:act_update , kb:act_delete ;
+    cto:matchesResourceType kb:res_image_member ;
+    cto:riskScore 2 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_firewall_rule_add a cto:BehaviorClass ;
+    rdfs:label "방화벽 규칙 추가"@ko ;
+    cto:matchesAction kb:act_create ;
+    cto:matchesResourceType kb:res_security_group_rule ;
+    cto:riskScore 10 ;
+    cto:suggestsTechnique kb:T1686_001 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_firewall_change a cto:BehaviorClass ;
+    rdfs:label "방화벽 변경"@ko ;
+    cto:matchesAction kb:act_update , kb:act_delete ;
+    cto:matchesResourceType kb:res_security_group_rule , kb:res_security_group ;
+    cto:riskScore 5 ;
+    cto:suggestsTechnique kb:T1686_001 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_firewall_group_create a cto:BehaviorClass ;
+    rdfs:label "보안그룹 생성"@ko ;
+    cto:matchesAction kb:act_create ;
+    cto:matchesResourceType kb:res_security_group ;
+    cto:riskScore 3 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_external_exposure a cto:BehaviorClass ;
+    rdfs:label "외부 노출(Floating IP 연결)"@ko ;
+    cto:matchesAction kb:act_create , kb:act_update ;
+    cto:matchesResourceType kb:res_floatingip ;
+    cto:riskScore 10 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_network_change a cto:BehaviorClass ;
+    rdfs:label "네트워크 구성 변경"@ko ;
+    cto:matchesAction kb:act_create , kb:act_update , kb:act_delete ;
+    cto:matchesResourceType kb:res_network , kb:res_subnet , kb:res_port , kb:res_router ;
+    cto:riskScore 1 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_floatingip_release a cto:BehaviorClass ;
+    rdfs:label "Floating IP 해제"@ko ;
+    cto:matchesAction kb:act_delete ;
+    cto:matchesResourceType kb:res_floatingip ;
+    cto:riskScore 1 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:bc_discovery a cto:BehaviorClass ;
+    rdfs:label "자원 조회·탐색"@ko ;
+    cto:matchesAction kb:act_read , kb:act_read_list ;
+    cto:matchesResourceType kb:res_instance , kb:res_security_group , kb:res_security_group_rule , kb:res_port , kb:res_network , kb:res_floatingip , kb:res_user , kb:res_project , kb:res_role_assignment ;
+    cto:riskScore 1 ;
+    cto:suggestsTechnique kb:T1580 , kb:T1526 , kb:T1087_004 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+# ---------------- 로그 이벤트 유형
+
+kb:ev_ks_auth_failure a cto:LogEventType ;
+    rdfs:label "Keystone 인증 실패"@ko ;
+    cto:eventTypeName "identity.authenticate" ;
+    cto:outcome "failure" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_authenticate ;
+    cto:onResourceType kb:res_user ;
+    cto:classifiedAs kb:bc_auth_failure ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_initiator_username , kb:f_ks_reason_code , kb:f_ks_pw_hash , kb:f_ks_cred_type , kb:f_ks_cred_idp , kb:f_ks_cred_groups ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" ;
+    rdfs:comment "기본 억제 이벤트. report_invalid_password_hash = event 설정 시 비밀번호 해시 첨부"@ko .
+
+kb:ev_ks_auth_success a cto:LogEventType ;
+    rdfs:label "Keystone 인증 성공"@ko ;
+    cto:eventTypeName "identity.authenticate" ;
+    cto:outcome "success" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_authenticate ;
+    cto:onResourceType kb:res_user ;
+    cto:classifiedAs kb:bc_auth_success ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_initiator_username , kb:f_ks_cred_type , kb:f_ks_cred_idp , kb:f_ks_cred_groups ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" ;
+    rdfs:comment "단독으로는 정상. 실패 반복 직후·처음 보는 IP일 때 의미"@ko .
+
+kb:ev_ks_ra_created a cto:LogEventType ;
+    rdfs:label "Keystone 역할 부여"@ko ;
+    cto:eventTypeName "identity.role_assignment.created" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_role_assignment ;
+    cto:classifiedAs kb:bc_privilege_grant ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_ra_role , kb:f_ks_ra_project , kb:f_ks_ra_domain , kb:f_ks_ra_user , kb:f_ks_ra_group ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_ra_deleted a cto:LogEventType ;
+    rdfs:label "Keystone 역할 회수"@ko ;
+    cto:eventTypeName "identity.role_assignment.deleted" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_role_assignment ;
+    cto:classifiedAs kb:bc_privilege_revoke ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_ra_role , kb:f_ks_ra_project , kb:f_ks_ra_domain , kb:f_ks_ra_user , kb:f_ks_ra_group ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "실로그확인필요" ;
+    rdfs:comment "이름은 identity.<resource>.<operation> 규칙으로 추정. 실로그 확인 필요"@ko .
+
+kb:ev_ks_user_created a cto:LogEventType ;
+    rdfs:label "Keystone 사용자 생성"@ko ;
+    cto:eventTypeName "identity.user.created" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_user ;
+    cto:classifiedAs kb:bc_account_create ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_user_updated a cto:LogEventType ;
+    rdfs:label "Keystone 사용자 변경"@ko ;
+    cto:eventTypeName "identity.user.updated" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_user ;
+    cto:classifiedAs kb:bc_account_modify ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_user_deleted a cto:LogEventType ;
+    rdfs:label "Keystone 사용자 삭제"@ko ;
+    cto:eventTypeName "identity.user.deleted" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_user ;
+    cto:classifiedAs kb:bc_account_delete ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_project_created a cto:LogEventType ;
+    rdfs:label "Keystone 프로젝트 생성"@ko ;
+    cto:eventTypeName "identity.project.created" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_project ;
+    cto:classifiedAs kb:bc_tenant_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_project_updated a cto:LogEventType ;
+    rdfs:label "Keystone 프로젝트 변경"@ko ;
+    cto:eventTypeName "identity.project.updated" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_project ;
+    cto:classifiedAs kb:bc_tenant_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_project_deleted a cto:LogEventType ;
+    rdfs:label "Keystone 프로젝트 삭제"@ko ;
+    cto:eventTypeName "identity.project.deleted" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_project ;
+    cto:classifiedAs kb:bc_tenant_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_group_created a cto:LogEventType ;
+    rdfs:label "Keystone 그룹 생성"@ko ;
+    cto:eventTypeName "identity.group.created" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_group ;
+    cto:classifiedAs kb:bc_tenant_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_group_updated a cto:LogEventType ;
+    rdfs:label "Keystone 그룹 변경"@ko ;
+    cto:eventTypeName "identity.group.updated" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_group ;
+    cto:classifiedAs kb:bc_tenant_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_group_deleted a cto:LogEventType ;
+    rdfs:label "Keystone 그룹 삭제"@ko ;
+    cto:eventTypeName "identity.group.deleted" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_group ;
+    cto:classifiedAs kb:bc_tenant_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_role_created a cto:LogEventType ;
+    rdfs:label "Keystone 역할 정의 생성"@ko ;
+    cto:eventTypeName "identity.role.created" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_role ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_role_updated a cto:LogEventType ;
+    rdfs:label "Keystone 역할 정의 변경"@ko ;
+    cto:eventTypeName "identity.role.updated" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_role ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_role_deleted a cto:LogEventType ;
+    rdfs:label "Keystone 역할 정의 삭제"@ko ;
+    cto:eventTypeName "identity.role.deleted" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_role ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_domain_created a cto:LogEventType ;
+    rdfs:label "Keystone 도메인 생성"@ko ;
+    cto:eventTypeName "identity.domain.created" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_domain ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_domain_updated a cto:LogEventType ;
+    rdfs:label "Keystone 도메인 변경"@ko ;
+    cto:eventTypeName "identity.domain.updated" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_domain ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_domain_deleted a cto:LogEventType ;
+    rdfs:label "Keystone 도메인 삭제"@ko ;
+    cto:eventTypeName "identity.domain.deleted" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_domain ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_trust_created a cto:LogEventType ;
+    rdfs:label "Keystone 위임 생성"@ko ;
+    cto:eventTypeName "identity.trust.created" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_trust ;
+    cto:classifiedAs kb:bc_delegation ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_trust_deleted a cto:LogEventType ;
+    rdfs:label "Keystone 위임 삭제"@ko ;
+    cto:eventTypeName "identity.trust.deleted" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_trust ;
+    cto:classifiedAs kb:bc_delegation ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_region_created a cto:LogEventType ;
+    rdfs:label "Keystone 리전 생성"@ko ;
+    cto:eventTypeName "identity.region.created" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_region ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_region_updated a cto:LogEventType ;
+    rdfs:label "Keystone 리전 변경"@ko ;
+    cto:eventTypeName "identity.region.updated" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_region ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_region_deleted a cto:LogEventType ;
+    rdfs:label "Keystone 리전 삭제"@ko ;
+    cto:eventTypeName "identity.region.deleted" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_region ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_endpoint_created a cto:LogEventType ;
+    rdfs:label "Keystone 엔드포인트 생성"@ko ;
+    cto:eventTypeName "identity.endpoint.created" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_endpoint ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_endpoint_updated a cto:LogEventType ;
+    rdfs:label "Keystone 엔드포인트 변경"@ko ;
+    cto:eventTypeName "identity.endpoint.updated" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_endpoint ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_endpoint_deleted a cto:LogEventType ;
+    rdfs:label "Keystone 엔드포인트 삭제"@ko ;
+    cto:eventTypeName "identity.endpoint.deleted" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_endpoint ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_service_created a cto:LogEventType ;
+    rdfs:label "Keystone 서비스 카탈로그 생성"@ko ;
+    cto:eventTypeName "identity.service.created" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_service ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_service_updated a cto:LogEventType ;
+    rdfs:label "Keystone 서비스 카탈로그 변경"@ko ;
+    cto:eventTypeName "identity.service.updated" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_service ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_service_deleted a cto:LogEventType ;
+    rdfs:label "Keystone 서비스 카탈로그 삭제"@ko ;
+    cto:eventTypeName "identity.service.deleted" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_service ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_policy_created a cto:LogEventType ;
+    rdfs:label "Keystone 정책 생성"@ko ;
+    cto:eventTypeName "identity.policy.created" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_policy ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_policy_updated a cto:LogEventType ;
+    rdfs:label "Keystone 정책 변경"@ko ;
+    cto:eventTypeName "identity.policy.updated" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_policy ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_ks_policy_deleted a cto:LogEventType ;
+    rdfs:label "Keystone 정책 삭제"@ko ;
+    cto:eventTypeName "identity.policy.deleted" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_policy ;
+    cto:classifiedAs kb:bc_identity_infra_change ;
+    cto:hasField kb:f_ks_initiator_id , kb:f_ks_initiator_user_id , kb:f_ks_src_ip , kb:f_ks_agent , kb:f_ks_request_id , kb:f_ks_action , kb:f_ks_outcome , kb:f_ks_target_id , kb:f_ks_target_type , kb:f_ks_resource_info ;
+    cto:derivedFrom kb:doc_keystone_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nova_instance_create a cto:LogEventType ;
+    rdfs:label "Nova 인스턴스 생성 완료"@ko ;
+    cto:eventTypeName "instance.create.end" ;
+    cto:emittedBy kb:Nova ;
+    cto:viaChannel kb:ch_nova_versioned ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_instance ;
+    cto:classifiedAs kb:bc_compute_create ;
+    cto:hasField kb:f_nova_uuid , kb:f_nova_user , kb:f_nova_tenant , kb:f_nova_host , kb:f_nova_image , kb:f_nova_flavor , kb:f_nova_vcpus , kb:f_nova_port , kb:f_nova_ip , kb:f_nova_key_name ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nova_instance_delete a cto:LogEventType ;
+    rdfs:label "Nova 인스턴스 삭제 완료"@ko ;
+    cto:eventTypeName "instance.delete.end" ;
+    cto:emittedBy kb:Nova ;
+    cto:viaChannel kb:ch_nova_versioned ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_instance ;
+    cto:classifiedAs kb:bc_compute_delete ;
+    cto:hasField kb:f_nova_uuid , kb:f_nova_user , kb:f_nova_tenant , kb:f_nova_host ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nova_instance_shutdown a cto:LogEventType ;
+    rdfs:label "Nova 인스턴스 종료 완료"@ko ;
+    cto:eventTypeName "instance.shutdown.end" ;
+    cto:emittedBy kb:Nova ;
+    cto:viaChannel kb:ch_nova_versioned ;
+    cto:hasAction kb:act_stop ;
+    cto:onResourceType kb:res_instance ;
+    cto:classifiedAs kb:bc_compute_state ;
+    cto:hasField kb:f_nova_uuid , kb:f_nova_user , kb:f_nova_tenant , kb:f_nova_host ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nova_keypair_create a cto:LogEventType ;
+    rdfs:label "Nova 키페어 생성·등록"@ko ;
+    cto:eventTypeName "keypair.create.end" , "keypair.import.end" ;
+    cto:emittedBy kb:Nova ;
+    cto:viaChannel kb:ch_nova_versioned ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_keypair ;
+    cto:classifiedAs kb:bc_credential_add ;
+    cto:hasField kb:f_nova_kp_user , kb:f_nova_kp_name , kb:f_nova_kp_fp , kb:f_nova_kp_type ;
+    cto:derivedFrom kb:doc_nova_keypair ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nova_keypair_delete a cto:LogEventType ;
+    rdfs:label "Nova 키페어 삭제"@ko ;
+    cto:eventTypeName "keypair.delete.end" ;
+    cto:emittedBy kb:Nova ;
+    cto:viaChannel kb:ch_nova_versioned ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_keypair ;
+    cto:classifiedAs kb:bc_credential_remove ;
+    cto:hasField kb:f_nova_kp_user , kb:f_nova_kp_name , kb:f_nova_kp_fp , kb:f_nova_kp_type ;
+    cto:derivedFrom kb:doc_nova_keypair ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nova_instance_snapshot a cto:LogEventType ;
+    rdfs:label "Nova 인스턴스 스냅샷 완료"@ko ;
+    cto:eventTypeName "instance.snapshot.end" ;
+    cto:emittedBy kb:Nova ;
+    cto:viaChannel kb:ch_nova_versioned ;
+    cto:hasAction kb:act_capture ;
+    cto:onResourceType kb:res_instance ;
+    cto:classifiedAs kb:bc_snapshot_create ;
+    cto:hasField kb:f_nova_uuid , kb:f_nova_user , kb:f_nova_tenant , kb:f_nova_host ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" ;
+    rdfs:comment "스냅샷으로 만들어진 이미지 ID 필드는 실로그 확인 필요"@ko .
+
+kb:ev_nova_instance_stop a cto:LogEventType ;
+    rdfs:label "Nova 인스턴스 전원 끔·일시정지·중단"@ko ;
+    cto:eventTypeName "instance.power_off.end" , "instance.pause.end" , "instance.suspend.end" ;
+    cto:emittedBy kb:Nova ;
+    cto:viaChannel kb:ch_nova_versioned ;
+    cto:hasAction kb:act_stop ;
+    cto:onResourceType kb:res_instance ;
+    cto:classifiedAs kb:bc_compute_state ;
+    cto:hasField kb:f_nova_uuid , kb:f_nova_user , kb:f_nova_tenant , kb:f_nova_host ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nova_instance_start a cto:LogEventType ;
+    rdfs:label "Nova 인스턴스 전원 켬·재개"@ko ;
+    cto:eventTypeName "instance.power_on.end" , "instance.unpause.end" ;
+    cto:emittedBy kb:Nova ;
+    cto:viaChannel kb:ch_nova_versioned ;
+    cto:hasAction kb:act_start ;
+    cto:onResourceType kb:res_instance ;
+    cto:classifiedAs kb:bc_compute_start ;
+    cto:hasField kb:f_nova_uuid , kb:f_nova_user , kb:f_nova_tenant , kb:f_nova_host ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nova_instance_resize a cto:LogEventType ;
+    rdfs:label "Nova 인스턴스 크기 변경 완료"@ko ;
+    cto:eventTypeName "instance.resize.end" ;
+    cto:emittedBy kb:Nova ;
+    cto:viaChannel kb:ch_nova_versioned ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_instance ;
+    cto:classifiedAs kb:bc_compute_modify ;
+    cto:hasField kb:f_nova_uuid , kb:f_nova_user , kb:f_nova_tenant , kb:f_nova_host ;
+    cto:derivedFrom kb:doc_nova_samples ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_gl_image_register a cto:LogEventType ;
+    rdfs:label "Glance 이미지 생성·업로드·활성화"@ko ;
+    cto:eventTypeName "image.create" , "image.upload" , "image.activate" ;
+    cto:emittedBy kb:Glance ;
+    cto:viaChannel kb:ch_glance_notif ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_image ;
+    cto:classifiedAs kb:bc_image_register ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" ;
+    rdfs:comment "payload 는 이미지 메타데이터라고만 문서에 있음. 이미지 ID·소유자·공개 여부 필드는 실로그 확인 후 추가"@ko .
+
+kb:ev_gl_image_update a cto:LogEventType ;
+    rdfs:label "Glance 이미지 변경"@ko ;
+    cto:eventTypeName "image.update" ;
+    cto:emittedBy kb:Glance ;
+    cto:viaChannel kb:ch_glance_notif ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_image ;
+    cto:classifiedAs kb:bc_image_register ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" ;
+    rdfs:comment "payload 는 이미지 메타데이터라고만 문서에 있음. 이미지 ID·소유자·공개 여부 필드는 실로그 확인 후 추가"@ko .
+
+kb:ev_gl_image_delete a cto:LogEventType ;
+    rdfs:label "Glance 이미지 삭제"@ko ;
+    cto:eventTypeName "image.delete" ;
+    cto:emittedBy kb:Glance ;
+    cto:viaChannel kb:ch_glance_notif ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_image ;
+    cto:classifiedAs kb:bc_image_delete ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" ;
+    rdfs:comment "INFO 이벤트의 payload 는 이미지 ID (문서)"@ko .
+
+kb:ev_gl_image_send a cto:LogEventType ;
+    rdfs:label "Glance 이미지 전송"@ko ;
+    cto:eventTypeName "image.send" ;
+    cto:emittedBy kb:Glance ;
+    cto:viaChannel kb:ch_glance_notif ;
+    cto:hasAction kb:act_send ;
+    cto:onResourceType kb:res_image ;
+    cto:classifiedAs kb:bc_image_transfer ;
+    cto:hasField kb:f_gl_image_id , kb:f_gl_owner , kb:f_gl_recv_tenant , kb:f_gl_recv_user , kb:f_gl_dest_ip , kb:f_gl_bytes ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_gl_image_member_create a cto:LogEventType ;
+    rdfs:label "Glance 이미지 공유 생성"@ko ;
+    cto:eventTypeName "image.member.create" ;
+    cto:emittedBy kb:Glance ;
+    cto:viaChannel kb:ch_glance_notif ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_image_member ;
+    cto:classifiedAs kb:bc_image_share ;
+    cto:hasField kb:f_gl_image_id , kb:f_gl_member_id , kb:f_gl_member_status ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" ;
+    rdfs:comment "공유 이벤트에는 이미지 소유자 필드가 없음 (문서)"@ko .
+
+kb:ev_gl_image_member_change a cto:LogEventType ;
+    rdfs:label "Glance 이미지 공유 변경·해제"@ko ;
+    cto:eventTypeName "image.member.update" , "image.member.delete" ;
+    cto:emittedBy kb:Glance ;
+    cto:viaChannel kb:ch_glance_notif ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_image_member ;
+    cto:classifiedAs kb:bc_image_share_change ;
+    cto:hasField kb:f_gl_image_id , kb:f_gl_member_id , kb:f_gl_member_status ;
+    cto:derivedFrom kb:doc_glance_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_security_group_rule_create a cto:LogEventType ;
+    rdfs:label "Neutron 보안그룹 규칙 생성"@ko ;
+    cto:eventTypeName "security_group_rule.create.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_security_group_rule ;
+    cto:classifiedAs kb:bc_firewall_rule_add ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id , kb:f_nt_sgr_id , kb:f_nt_sgr_sg , kb:f_nt_sgr_remote_ip , kb:f_nt_sgr_remote_group , kb:f_nt_sgr_direction , kb:f_nt_sgr_protocol , kb:f_nt_sgr_port_min , kb:f_nt_sgr_port_max , kb:f_nt_sgr_project ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_security_group_rule_delete a cto:LogEventType ;
+    rdfs:label "Neutron 보안그룹 규칙 삭제"@ko ;
+    cto:eventTypeName "security_group_rule.delete.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_security_group_rule ;
+    cto:classifiedAs kb:bc_firewall_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id , kb:f_nt_sgr_id , kb:f_nt_sgr_sg , kb:f_nt_sgr_remote_ip , kb:f_nt_sgr_remote_group , kb:f_nt_sgr_direction , kb:f_nt_sgr_protocol , kb:f_nt_sgr_port_min , kb:f_nt_sgr_port_max , kb:f_nt_sgr_project ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_security_group_create a cto:LogEventType ;
+    rdfs:label "Neutron 보안그룹 생성"@ko ;
+    cto:eventTypeName "security_group.create.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_security_group ;
+    cto:classifiedAs kb:bc_firewall_group_create ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_security_group_update a cto:LogEventType ;
+    rdfs:label "Neutron 보안그룹 변경"@ko ;
+    cto:eventTypeName "security_group.update.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_security_group ;
+    cto:classifiedAs kb:bc_firewall_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_security_group_delete a cto:LogEventType ;
+    rdfs:label "Neutron 보안그룹 삭제"@ko ;
+    cto:eventTypeName "security_group.delete.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_security_group ;
+    cto:classifiedAs kb:bc_firewall_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_floatingip_create a cto:LogEventType ;
+    rdfs:label "Neutron Floating IP 생성"@ko ;
+    cto:eventTypeName "floatingip.create.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_floatingip ;
+    cto:classifiedAs kb:bc_external_exposure ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id , kb:f_nt_fip_id , kb:f_nt_fip_port , kb:f_nt_fip_addr , kb:f_nt_fip_project ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_floatingip_update a cto:LogEventType ;
+    rdfs:label "Neutron Floating IP 변경"@ko ;
+    cto:eventTypeName "floatingip.update.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_floatingip ;
+    cto:classifiedAs kb:bc_external_exposure ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id , kb:f_nt_fip_id , kb:f_nt_fip_port , kb:f_nt_fip_addr , kb:f_nt_fip_project ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_floatingip_delete a cto:LogEventType ;
+    rdfs:label "Neutron Floating IP 삭제"@ko ;
+    cto:eventTypeName "floatingip.delete.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_floatingip ;
+    cto:classifiedAs kb:bc_floatingip_release ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id , kb:f_nt_fip_id , kb:f_nt_fip_port , kb:f_nt_fip_addr , kb:f_nt_fip_project ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_port_create a cto:LogEventType ;
+    rdfs:label "Neutron 포트 생성"@ko ;
+    cto:eventTypeName "port.create.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_port ;
+    cto:classifiedAs kb:bc_network_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id , kb:f_nt_port_id , kb:f_nt_port_device , kb:f_nt_port_owner , kb:f_nt_port_sgs , kb:f_nt_port_project ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_port_update a cto:LogEventType ;
+    rdfs:label "Neutron 포트 변경"@ko ;
+    cto:eventTypeName "port.update.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_port ;
+    cto:classifiedAs kb:bc_network_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id , kb:f_nt_port_id , kb:f_nt_port_device , kb:f_nt_port_owner , kb:f_nt_port_sgs , kb:f_nt_port_project ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_port_delete a cto:LogEventType ;
+    rdfs:label "Neutron 포트 삭제"@ko ;
+    cto:eventTypeName "port.delete.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_port ;
+    cto:classifiedAs kb:bc_network_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id , kb:f_nt_port_id , kb:f_nt_port_device , kb:f_nt_port_owner , kb:f_nt_port_sgs , kb:f_nt_port_project ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_router_create a cto:LogEventType ;
+    rdfs:label "Neutron 라우터 생성"@ko ;
+    cto:eventTypeName "router.create.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_router ;
+    cto:classifiedAs kb:bc_network_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_router_update a cto:LogEventType ;
+    rdfs:label "Neutron 라우터 변경"@ko ;
+    cto:eventTypeName "router.update.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_router ;
+    cto:classifiedAs kb:bc_network_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_router_delete a cto:LogEventType ;
+    rdfs:label "Neutron 라우터 삭제"@ko ;
+    cto:eventTypeName "router.delete.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_router ;
+    cto:classifiedAs kb:bc_network_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_network_create a cto:LogEventType ;
+    rdfs:label "Neutron 네트워크 생성"@ko ;
+    cto:eventTypeName "network.create.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_network ;
+    cto:classifiedAs kb:bc_network_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_network_update a cto:LogEventType ;
+    rdfs:label "Neutron 네트워크 변경"@ko ;
+    cto:eventTypeName "network.update.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_network ;
+    cto:classifiedAs kb:bc_network_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_network_delete a cto:LogEventType ;
+    rdfs:label "Neutron 네트워크 삭제"@ko ;
+    cto:eventTypeName "network.delete.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_network ;
+    cto:classifiedAs kb:bc_network_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_subnet_create a cto:LogEventType ;
+    rdfs:label "Neutron 서브넷 생성"@ko ;
+    cto:eventTypeName "subnet.create.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_subnet ;
+    cto:classifiedAs kb:bc_network_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_subnet_update a cto:LogEventType ;
+    rdfs:label "Neutron 서브넷 변경"@ko ;
+    cto:eventTypeName "subnet.update.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_subnet ;
+    cto:classifiedAs kb:bc_network_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_subnet_delete a cto:LogEventType ;
+    rdfs:label "Neutron 서브넷 삭제"@ko ;
+    cto:eventTypeName "subnet.delete.end" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_subnet ;
+    cto:classifiedAs kb:bc_network_change ;
+    cto:hasField kb:f_ctx_user , kb:f_ctx_project , kb:f_ctx_request_id ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_nt_router_interface a cto:LogEventType ;
+    rdfs:label "Neutron 라우터 인터페이스 추가·삭제"@ko ;
+    cto:eventTypeName "router.interface.create" , "router.interface.delete" ;
+    cto:emittedBy kb:Neutron ;
+    cto:viaChannel kb:ch_neutron_notif ;
+    cto:hasAction kb:act_update ;
+    cto:onResourceType kb:res_router ;
+    cto:classifiedAs kb:bc_network_change ;
+    cto:derivedFrom kb:doc_neutron_notif ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:ev_audit_read a cto:LogEventType ;
+    rdfs:label "API 조회 요청 (audit)"@ko ;
+    cto:eventTypeName "audit.http.request" ;
+    cto:viaChannel kb:ch_audit ;
+    cto:hasAction kb:act_read_list ;
+    cto:classifiedAs kb:bc_discovery ;
+    cto:derivedFrom kb:doc_audit_mw ;
+    cto:verificationStatus "실로그확인필요" ;
+    rdfs:comment "audit 미들웨어가 기록하는 조회(GET) 요청. 이벤트 이름·필드는 실로그로 확인 필요. 대상 자원은 target.typeURI로 판별"@ko .
+
+# ---------------- 공격 순서 precedes (팀설계. 데이터 기반 coOccursWith 는 자동 생성)
+
+kb:T1110 cto:precedes kb:T1078_004 .
+
+kb:T1110_001 cto:precedes kb:T1078_004 .
+
+kb:T1110_003 cto:precedes kb:T1078_004 .
+
+kb:T1578_001 cto:precedes kb:T1537 .
+
+kb:T1525 cto:precedes kb:T1204_003 .
+
+kb:T1078_004 cto:precedes kb:T1580 , kb:T1526 , kb:T1087_004 , kb:T1098_003 , kb:T1136_003 , kb:T1578_002 , kb:T1098_001 , kb:T1578_001 .
+
+kb:T1087_004 cto:precedes kb:T1098_003 .
+
+kb:T1580 cto:precedes kb:T1578_002 , kb:T1686_001 .
+
+kb:T1526 cto:precedes kb:T1578_002 .
+
+kb:T1098_003 cto:precedes kb:T1578_002 .
+
+kb:T1136_003 cto:precedes kb:T1578_002 .
+
+kb:T1578_002 cto:precedes kb:T1686_001 , kb:T1496_001 , kb:T1578_003 .
+
+kb:T1686_001 cto:precedes kb:T1496_001 .
+
+
+# ---------------- 경보 등급
+
+kb:tier_immediate a cto:AlertTier ;
+    rdfs:label "즉시"@ko ;
+    rdfs:comment "고위험 단일 행위"@ko .
+
+kb:tier_chain a cto:AlertTier ;
+    rdfs:label "체인"@ko ;
+    rdfs:comment "공격 체인 성립"@ko .
+
+kb:tier_score a cto:AlertTier ;
+    rdfs:label "점수"@ko ;
+    rdfs:comment "행위자 누적 위험 점수 초과"@ko .
+
+kb:tier_info a cto:AlertTier ;
+    rdfs:label "정보"@ko ;
+    rdfs:comment "기록·점수 누적만"@ko .
+
+# ---------------- 탐지 규칙 (팀설계. 임계값은 초기값, 정상·공격 로그 실측으로 조정)
+
+kb:rule_sg_open_world a cto:DetectionRule ;
+    rdfs:label "보안그룹 전체 개방"@ko ;
+    cto:alertTier kb:tier_immediate ;
+    cto:ruleType "filter" ;
+    cto:filter "payload.security_group_rule.direction == ingress" ;
+    cto:filter "payload.security_group_rule.remote_ip_prefix in 0.0.0.0/0|::/0|__empty__" ;
+    cto:filter "payload.security_group_rule.remote_group_id empty" ;
+    cto:filter "payload.security_group_rule.port_range_min covers_port 22|3389|any" ;
+    cto:usesEvent kb:ev_nt_security_group_rule_create ;
+    cto:usesBehavior kb:bc_firewall_rule_add ;
+    cto:detects kb:T1686_001 ;
+    cto:condition "direction=ingress 이고 (remote_ip_prefix 가 0.0.0.0/0 또는 ::/0 이거나, remote_ip_prefix 와 remote_group_id 가 모두 비어 있음) 이며 포트 범위가 전체이거나 22·3389 를 포함"@ko ;
+    cto:severity "critical" ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_admin_role_grant a cto:DetectionRule ;
+    rdfs:label "관리자 역할 부여"@ko ;
+    cto:alertTier kb:tier_immediate ;
+    cto:ruleType "filter" ;
+    cto:filter "payload.role in_allowlist admin_role_id" ;
+    cto:filter "@user not_in_allowlist service_account|automation_account" ;
+    cto:usesEvent kb:ev_ks_ra_created ;
+    cto:usesBehavior kb:bc_privilege_grant ;
+    cto:detects kb:T1098_003 ;
+    cto:condition "payload.role 이 admin 역할 ID 이고 행위자가 허용 목록에 없음"@ko ;
+    cto:severity "high" ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_identity_infra_change a cto:DetectionRule ;
+    rdfs:label "인증 인프라 설정 변경"@ko ;
+    cto:alertTier kb:tier_immediate ;
+    cto:ruleType "filter" ;
+    cto:filter "@user not_in_allowlist service_account|automation_account" ;
+    cto:usesBehavior kb:bc_identity_infra_change ;
+    cto:condition "정책·엔드포인트·서비스·도메인·리전·역할 정의 변경을 허용 목록 밖 행위자가 수행"@ko ;
+    cto:severity "high" ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_bruteforce a cto:DetectionRule ;
+    rdfs:label "Keystone 무차별 대입"@ko ;
+    cto:alertTier kb:tier_immediate ;
+    cto:ruleType "threshold" ;
+    cto:groupBy "@ip" ;
+    cto:usesEvent kb:ev_ks_auth_failure ;
+    cto:usesBehavior kb:bc_auth_failure ;
+    cto:detects kb:T1110 ;
+    cto:condition "같은 출발지 IP 에서 300초 안에 인증 실패 10회 이상. partial_password_hash 가 계속 바뀌면 공격, 같으면 설정 오류로 분류"@ko ;
+    cto:severity "medium" ;
+    cto:threshold 10 ;
+    cto:windowSeconds 300 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_mass_create a cto:DetectionRule ;
+    rdfs:label "인스턴스 대량 생성"@ko ;
+    cto:alertTier kb:tier_score ;
+    cto:ruleType "threshold" ;
+    cto:filter "@project not_in_allowlist protected_resource" ;
+    cto:groupBy "@project" ;
+    cto:usesEvent kb:ev_nova_instance_create ;
+    cto:usesBehavior kb:bc_compute_create ;
+    cto:detects kb:T1578_002 , kb:T1496_001 ;
+    cto:condition "허용 목록 밖 프로젝트에서 600초 안에 인스턴스 10개 이상 (임계값은 정상 운영 로그로 조정 필요). 단독 경보 대신 사건 맥락·점수로 사용"@ko ;
+    cto:severity "medium" ;
+    cto:threshold 10 ;
+    cto:windowSeconds 600 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_fail_then_success a cto:DetectionRule ;
+    rdfs:label "실패 반복 후 로그인 성공"@ko ;
+    cto:alertTier kb:tier_chain ;
+    cto:ruleType "sequence" ;
+    cto:groupBy "@ip" ;
+    cto:sequenceStep "1:rule_bruteforce|rule_password_guessing|rule_password_spraying" ;
+    cto:sequenceStep "2:bc_auth_success" ;
+    cto:usesEvent kb:ev_ks_auth_failure , kb:ev_ks_auth_success ;
+    cto:usesBehavior kb:bc_auth_failure , kb:bc_auth_success ;
+    cto:detects kb:T1078_004 ;
+    cto:condition "무차별 대입 경보가 난 IP 에서 600초 안에 인증 성공"@ko ;
+    cto:severity "high" ;
+    cto:windowSeconds 600 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_takeover_then_privilege a cto:DetectionRule ;
+    rdfs:label "의심 로그인 후 권한 확대"@ko ;
+    cto:alertTier kb:tier_chain ;
+    cto:ruleType "sequence" ;
+    cto:groupBy "@user" ;
+    cto:sequenceStep "1:rule_fail_then_success|bc_auth_success@new_source" ;
+    cto:sequenceStep "2:bc_privilege_grant|bc_account_create" ;
+    cto:usesBehavior kb:bc_auth_success , kb:bc_privilege_grant , kb:bc_account_create ;
+    cto:detects kb:T1098_003 , kb:T1136_003 ;
+    cto:condition "의심 로그인(실패 반복 후 성공 또는 처음 보는 IP) 이후 3600초 안에 같은 사용자가 역할 부여 또는 계정 생성"@ko ;
+    cto:severity "critical" ;
+    cto:windowSeconds 3600 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_privilege_then_compute a cto:DetectionRule ;
+    rdfs:label "권한 확대 후 자원 생성"@ko ;
+    cto:alertTier kb:tier_chain ;
+    cto:ruleType "sequence" ;
+    cto:groupBy "@user" ;
+    cto:sequenceStep "1:bc_privilege_grant" ;
+    cto:sequenceStep "2:bc_compute_create" ;
+    cto:minCount 3 ;
+    cto:usesBehavior kb:bc_privilege_grant , kb:bc_compute_create ;
+    cto:detects kb:T1578_002 ;
+    cto:condition "역할 부여 이후 3600초 안에 같은 사용자가 인스턴스 3개 이상 생성"@ko ;
+    cto:severity "high" ;
+    cto:threshold 3 ;
+    cto:windowSeconds 3600 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_compute_then_exposure a cto:DetectionRule ;
+    rdfs:label "생성 자원의 외부 노출"@ko ;
+    cto:alertTier kb:tier_chain ;
+    cto:ruleType "sequence" ;
+    cto:groupBy "@project" ;
+    cto:sequenceStep "1:bc_compute_create" ;
+    cto:sequenceStep "2:rule_sg_open_world|bc_external_exposure" ;
+    cto:usesBehavior kb:bc_compute_create , kb:bc_firewall_rule_add , kb:bc_external_exposure ;
+    cto:detects kb:T1686_001 ;
+    cto:condition "같은 프로젝트에서 인스턴스 생성 후 3600초 안에 보안그룹 개방(sg_open_world) 또는 Floating IP 연결"@ko ;
+    cto:severity "critical" ;
+    cto:windowSeconds 3600 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_password_guessing a cto:DetectionRule ;
+    rdfs:label "비밀번호 추측"@ko ;
+    cto:alertTier kb:tier_immediate ;
+    cto:ruleType "threshold" ;
+    cto:groupBy "@user" ;
+    cto:distinctField "payload.attachments[name=partial_password_hash].content" ;
+    cto:distinctMin 3 ;
+    cto:usesEvent kb:ev_ks_auth_failure ;
+    cto:usesBehavior kb:bc_auth_failure ;
+    cto:detects kb:T1110_001 ;
+    cto:condition "같은 계정에 300초 안에 인증 실패 10회 이상, 비밀번호 부분 해시가 3종류 이상(비밀번호를 바꿔 가며 시도). 해시 필드가 없는 버전이면 건수만으로 판단"@ko ;
+    cto:severity "medium" ;
+    cto:threshold 10 ;
+    cto:windowSeconds 300 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_password_spraying a cto:DetectionRule ;
+    rdfs:label "비밀번호 스프레이"@ko ;
+    cto:alertTier kb:tier_immediate ;
+    cto:ruleType "threshold" ;
+    cto:groupBy "@ip" ;
+    cto:distinctField "payload.initiator.id" ;
+    cto:distinctMin 5 ;
+    cto:usesEvent kb:ev_ks_auth_failure ;
+    cto:usesBehavior kb:bc_auth_failure ;
+    cto:detects kb:T1110_003 ;
+    cto:condition "같은 출발지 IP 에서 300초 안에 서로 다른 계정 5개 이상 인증 실패"@ko ;
+    cto:severity "medium" ;
+    cto:threshold 5 ;
+    cto:windowSeconds 300 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_image_share_external a cto:DetectionRule ;
+    rdfs:label "이미지 외부 프로젝트 공유"@ko ;
+    cto:alertTier kb:tier_immediate ;
+    cto:ruleType "filter" ;
+    cto:filter "payload.member_id not_in_allowlist trusted_project" ;
+    cto:usesEvent kb:ev_gl_image_member_create ;
+    cto:usesBehavior kb:bc_image_share ;
+    cto:detects kb:T1537 ;
+    cto:condition "이미지가 다른 프로젝트에 공유됨. 공유 이벤트에는 소유자 필드가 없어 모든 공유를 외부 공유로 보고, 신뢰 프로젝트만 제외"@ko ;
+    cto:severity "high" ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_image_send_cross_project a cto:DetectionRule ;
+    rdfs:label "이미지 다른 프로젝트로 전송"@ko ;
+    cto:alertTier kb:tier_immediate ;
+    cto:ruleType "filter" ;
+    cto:filter "payload.receiver_tenant_id ne_field payload.owner_id" ;
+    cto:filter "payload.image_id not_in_allowlist trusted_image" ;
+    cto:usesEvent kb:ev_gl_image_send ;
+    cto:usesBehavior kb:bc_image_transfer ;
+    cto:detects kb:T1537 ;
+    cto:condition "받는 쪽 프로젝트가 이미지 소유자와 다르고 신뢰 이미지가 아님. 공개 이미지로 다른 프로젝트가 인스턴스를 만들 때도 발생하므로 신뢰 이미지 목록을 채워야 오탐이 줄어듦"@ko ;
+    cto:severity "medium" ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_keypair_after_takeover a cto:DetectionRule ;
+    rdfs:label "의심 로그인 후 키페어 등록"@ko ;
+    cto:alertTier kb:tier_chain ;
+    cto:ruleType "sequence" ;
+    cto:groupBy "@user" ;
+    cto:sequenceStep "1:rule_fail_then_success|bc_auth_success@new_source" ;
+    cto:sequenceStep "2:bc_credential_add" ;
+    cto:usesBehavior kb:bc_auth_success , kb:bc_credential_add ;
+    cto:detects kb:T1098_001 ;
+    cto:condition "의심 로그인(실패 반복 후 성공 또는 처음 보는 IP) 이후 3600초 안에 같은 사용자가 키페어 생성·등록"@ko ;
+    cto:severity "high" ;
+    cto:windowSeconds 3600 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_risk_accumulation a cto:DetectionRule ;
+    rdfs:label "누적 위험 점수 초과"@ko ;
+    cto:alertTier kb:tier_score ;
+    cto:ruleType "score" ;
+    cto:filter "@actor not_in_allowlist service_account|automation_account|admin_ip" ;
+    cto:groupBy "@actor" ;
+    cto:condition "행위자(사용자 또는 IP)별로 3600초 동안 행위 분류 riskScore 합이 50 이상"@ko ;
+    cto:severity "medium" ;
+    cto:threshold 50 ;
+    cto:windowSeconds 3600 ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+# ---------------- 명령 인자 (자리표시자 ← 로그 필드. LLM이 값을 만들지 않음)
+
+kb:param_user a cto:CommandParameter ;
+    cto:placeholder "<user>" ;
+    cto:valueFrom kb:f_ks_initiator_id , kb:f_ks_ra_user , kb:f_nova_user , kb:f_nova_kp_user .
+
+kb:param_created_user a cto:CommandParameter ;
+    cto:placeholder "<created_user>" ;
+    cto:valueFrom kb:f_ks_resource_info .
+
+kb:param_image a cto:CommandParameter ;
+    cto:placeholder "<image>" ;
+    cto:valueFrom kb:f_gl_image_id .
+
+kb:param_member_project a cto:CommandParameter ;
+    cto:placeholder "<member-project>" ;
+    cto:valueFrom kb:f_gl_member_id , kb:f_gl_recv_tenant .
+
+kb:param_keypair a cto:CommandParameter ;
+    cto:placeholder "<keypair>" ;
+    cto:valueFrom kb:f_nova_kp_name .
+
+kb:param_project a cto:CommandParameter ;
+    cto:placeholder "<project>" ;
+    cto:valueFrom kb:f_ks_ra_project , kb:f_nova_tenant , kb:f_nt_sgr_project , kb:f_nt_fip_project , kb:f_nt_port_project .
+
+kb:param_role a cto:CommandParameter ;
+    cto:placeholder "<role>" ;
+    cto:valueFrom kb:f_ks_ra_role .
+
+kb:param_server a cto:CommandParameter ;
+    cto:placeholder "<server>" ;
+    cto:valueFrom kb:f_nova_uuid , kb:f_nt_port_device .
+
+kb:param_rule a cto:CommandParameter ;
+    cto:placeholder "<rule>" ;
+    cto:valueFrom kb:f_nt_sgr_id .
+
+kb:param_security_group a cto:CommandParameter ;
+    cto:placeholder "<security-group>" ;
+    cto:valueFrom kb:f_nt_sgr_sg .
+
+kb:param_floating_ip a cto:CommandParameter ;
+    cto:placeholder "<floating-ip>" ;
+    cto:valueFrom kb:f_nt_fip_id .
+
+kb:param_port a cto:CommandParameter ;
+    cto:placeholder "<port>" ;
+    cto:valueFrom kb:f_nt_fip_port , kb:f_nt_port_id , kb:f_nova_port .
+
+# ---------------- 자동 조사 항목 (읽기 전용, 에이전트 자동 실행)
+
+kb:inv_user_show a cto:InvestigationQuery ;
+    rdfs:label "계정 정보 조회"@ko ;
+    cto:command "openstack user show <user>" ;
+    cto:hasParameter kb:param_user ;
+    cto:purpose "계정 상태·도메인·활성 여부 확인"@ko ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:inv_role_list a cto:InvestigationQuery ;
+    rdfs:label "계정의 역할 목록"@ko ;
+    cto:command "openstack role assignment list --user <user> --names" ;
+    cto:hasParameter kb:param_user ;
+    cto:purpose "보유 권한·최근 추가 역할 확인"@ko ;
+    cto:derivedFrom kb:doc_osc ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:inv_server_by_user a cto:InvestigationQuery ;
+    rdfs:label "계정이 만든 인스턴스"@ko ;
+    cto:command "openstack server list --all-projects --user <user>" ;
+    cto:hasParameter kb:param_user ;
+    cto:purpose "탈취 계정으로 생성된 인스턴스 파악"@ko ;
+    cto:derivedFrom kb:doc_osc ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:inv_server_by_project a cto:InvestigationQuery ;
+    rdfs:label "프로젝트 인스턴스"@ko ;
+    cto:command "openstack server list --all-projects --project <project>" ;
+    cto:hasParameter kb:param_project ;
+    cto:purpose "대량 생성 여부 확인"@ko ;
+    cto:derivedFrom kb:doc_osc ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:inv_server_show a cto:InvestigationQuery ;
+    rdfs:label "인스턴스 상세"@ko ;
+    cto:command "openstack server show <server>" ;
+    cto:hasParameter kb:param_server ;
+    cto:purpose "사양·이미지·보안그룹·네트워크 확인"@ko ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:inv_sg_rule_list a cto:InvestigationQuery ;
+    rdfs:label "보안그룹 규칙 목록"@ko ;
+    cto:command "openstack security group rule list <security-group>" ;
+    cto:hasParameter kb:param_security_group ;
+    cto:purpose "전체 개방 규칙·개방 포트 확인"@ko ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:inv_fip_list a cto:InvestigationQuery ;
+    rdfs:label "프로젝트 Floating IP"@ko ;
+    cto:command "openstack floating ip list --project <project>" ;
+    cto:hasParameter kb:param_project ;
+    cto:purpose "외부 노출 인스턴스 확인"@ko ;
+    cto:derivedFrom kb:doc_osc ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:inv_image_show a cto:InvestigationQuery ;
+    rdfs:label "이미지 상세"@ko ;
+    cto:command "openstack image show <image>" ;
+    cto:hasParameter kb:param_image ;
+    cto:purpose "소유자·공개 여부·생성 시각 확인"@ko ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:inv_image_member_list a cto:InvestigationQuery ;
+    rdfs:label "이미지 공유 대상 목록"@ko ;
+    cto:command "openstack image member list <image>" ;
+    cto:hasParameter kb:param_image ;
+    cto:purpose "어느 프로젝트에 공유됐는지 확인"@ko ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:inv_keypair_list_user a cto:InvestigationQuery ;
+    rdfs:label "사용자의 키페어 목록"@ko ;
+    cto:command "openstack keypair list --user <user>" ;
+    cto:hasParameter kb:param_user ;
+    cto:purpose "공격자가 등록한 키페어 확인"@ko ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:inv_server_by_image a cto:InvestigationQuery ;
+    rdfs:label "이미지로 만든 인스턴스"@ko ;
+    cto:command "openstack server list --all-projects --image <image>" ;
+    cto:hasParameter kb:param_image ;
+    cto:purpose "해당 이미지로 실행된 인스턴스 파악"@ko ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:bc_auth_failure cto:investigateWith kb:inv_user_show , kb:inv_role_list .
+
+kb:bc_auth_success cto:investigateWith kb:inv_user_show , kb:inv_role_list , kb:inv_server_by_user .
+
+kb:bc_privilege_grant cto:investigateWith kb:inv_role_list , kb:inv_user_show .
+
+kb:bc_account_create cto:investigateWith kb:inv_user_show , kb:inv_role_list .
+
+kb:bc_account_modify cto:investigateWith kb:inv_user_show , kb:inv_role_list .
+
+kb:bc_compute_create cto:investigateWith kb:inv_server_show , kb:inv_server_by_project .
+
+kb:bc_firewall_rule_add cto:investigateWith kb:inv_sg_rule_list .
+
+kb:bc_firewall_change cto:investigateWith kb:inv_sg_rule_list .
+
+kb:bc_external_exposure cto:investigateWith kb:inv_fip_list .
+
+kb:bc_identity_infra_change cto:investigateWith kb:inv_user_show , kb:inv_role_list .
+
+kb:bc_discovery cto:investigateWith kb:inv_user_show , kb:inv_role_list .
+
+kb:bc_credential_add cto:investigateWith kb:inv_keypair_list_user , kb:inv_user_show .
+
+kb:bc_snapshot_create cto:investigateWith kb:inv_server_show .
+
+kb:bc_image_register cto:investigateWith kb:inv_image_show .
+
+kb:bc_image_transfer cto:investigateWith kb:inv_image_show , kb:inv_server_by_image .
+
+kb:bc_image_share cto:investigateWith kb:inv_image_show , kb:inv_image_member_list .
+
+
+# ---------------- 대응 권고 (관리자 승인 후 실행)
+
+# 참고: 토큰 폐기(openstack token revoke <token>)는 로그에 토큰 값이 없어 인자를 채울 수 없으므로 제외
+
+kb:resp_disable_user a cto:ResponseAction ;
+    rdfs:label "사용자 비활성화"@ko ;
+    cto:command "openstack user set --disable <user>" ;
+    cto:requiresApproval true ;
+    cto:rollbackCommand "openstack user set --enable <user>" ;
+    cto:hasParameter kb:param_user ;
+    cto:implements d3f:AccountLocking ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:resp_disable_created_user a cto:ResponseAction ;
+    rdfs:label "새로 생성된 계정 비활성화"@ko ;
+    cto:command "openstack user set --disable <created_user>" ;
+    cto:requiresApproval true ;
+    cto:rollbackCommand "openstack user set --enable <created_user>" ;
+    cto:hasParameter kb:param_created_user ;
+    cto:implements d3f:AccountLocking ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:resp_remove_role a cto:ResponseAction ;
+    rdfs:label "부여된 역할 회수"@ko ;
+    cto:command "openstack role remove --user <user> --project <project> <role>" ;
+    cto:requiresApproval true ;
+    cto:rollbackCommand "openstack role add --user <user> --project <project> <role>" ;
+    cto:hasParameter kb:param_user , kb:param_project , kb:param_role ;
+    cto:implements d3f:UserAccountPermissions ;
+    cto:derivedFrom kb:doc_osc ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:resp_stop_server a cto:ResponseAction ;
+    rdfs:label "의심 인스턴스 정지"@ko ;
+    cto:command "openstack server stop <server>" ;
+    cto:requiresApproval true ;
+    cto:rollbackCommand "openstack server start <server>" ;
+    cto:hasParameter kb:param_server ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:resp_delete_sg_rule a cto:ResponseAction ;
+    rdfs:label "개방된 보안그룹 규칙 삭제"@ko ;
+    cto:command "openstack security group rule delete <rule>" ;
+    cto:requiresApproval true ;
+    rdfs:comment "되돌리기 명령 없음. 실행 전 규칙 내용을 조사 결과로 보관해 재생성 가능하게 할 것"@ko ;
+    cto:hasParameter kb:param_rule ;
+    cto:implements d3f:InboundTrafficFiltering ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:resp_unset_fip a cto:ResponseAction ;
+    rdfs:label "Floating IP 연결 해제"@ko ;
+    cto:command "openstack floating ip unset --port <floating-ip>" ;
+    cto:requiresApproval true ;
+    cto:rollbackCommand "openstack floating ip set --port <port> <floating-ip>" ;
+    cto:hasParameter kb:param_floating_ip , kb:param_port ;
+    cto:implements d3f:InboundTrafficFiltering ;
+    cto:derivedFrom kb:doc_osc ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:resp_image_unshare a cto:ResponseAction ;
+    rdfs:label "이미지 공유 취소"@ko ;
+    cto:command "openstack image remove project <image> <member-project>" ;
+    cto:requiresApproval true ;
+    rdfs:comment "되돌리기 명령(공유 다시 추가)은 아직 공식 확인 안 함"@ko ;
+    cto:hasParameter kb:param_image , kb:param_member_project ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:resp_image_deactivate a cto:ResponseAction ;
+    rdfs:label "의심 이미지 비활성화"@ko ;
+    cto:command "openstack image set --deactivate <image>" ;
+    cto:requiresApproval true ;
+    cto:rollbackCommand "openstack image set --activate <image>" ;
+    cto:hasParameter kb:param_image ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:resp_keypair_delete a cto:ResponseAction ;
+    rdfs:label "공격자 키페어 삭제"@ko ;
+    cto:command "openstack keypair delete --user <user> <keypair>" ;
+    cto:requiresApproval true ;
+    rdfs:comment "되돌리기 없음. 로그의 공개키로 재등록할 수 있는지는 확인 안 함"@ko ;
+    cto:hasParameter kb:param_user , kb:param_keypair ;
+    cto:derivedFrom kb:doc_osc , kb:doc_osc_help ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:T1110 cto:recommendedResponse kb:resp_disable_user .
+
+kb:T1078_004 cto:recommendedResponse kb:resp_disable_user .
+
+kb:T1098_003 cto:recommendedResponse kb:resp_remove_role .
+
+kb:T1136_003 cto:recommendedResponse kb:resp_disable_created_user .
+
+kb:T1578_002 cto:recommendedResponse kb:resp_stop_server .
+
+kb:T1496_001 cto:recommendedResponse kb:resp_stop_server .
+
+kb:T1686_001 cto:recommendedResponse kb:resp_delete_sg_rule , kb:resp_unset_fip .
+
+kb:T1537 cto:recommendedResponse kb:resp_image_unshare , kb:resp_image_deactivate .
+
+kb:T1525 cto:recommendedResponse kb:resp_image_deactivate .
+
+kb:T1098_001 cto:recommendedResponse kb:resp_keypair_delete .
+
+kb:T1110_001 cto:recommendedResponse kb:resp_disable_user .
+
+
+# ---------------- 허용 목록 (예시. 실제 값은 클러스터에서 확인해 채움)
+
+kb:allow_svc_nova a cto:AllowlistEntry ;
+    cto:entryKind "service_account" ;
+    cto:entryValue "nova" ;
+    cto:verificationStatus "실로그확인필요" ;
+    rdfs:comment "클러스터의 실제 서비스 계정·관리자 IP·admin 역할 ID 로 교체 (allowlist.json 으로도 지정 가능)"@ko .
+
+kb:allow_svc_neutron a cto:AllowlistEntry ;
+    cto:entryKind "service_account" ;
+    cto:entryValue "neutron" ;
+    cto:verificationStatus "실로그확인필요" ;
+    rdfs:comment "클러스터의 실제 서비스 계정·관리자 IP·admin 역할 ID 로 교체 (allowlist.json 으로도 지정 가능)"@ko .
+
+kb:allow_svc_placement a cto:AllowlistEntry ;
+    cto:entryKind "service_account" ;
+    cto:entryValue "placement" ;
+    cto:verificationStatus "실로그확인필요" ;
+    rdfs:comment "클러스터의 실제 서비스 계정·관리자 IP·admin 역할 ID 로 교체 (allowlist.json 으로도 지정 가능)"@ko .
+
+kb:allow_admin_ip a cto:AllowlistEntry ;
+    cto:entryKind "admin_ip" ;
+    cto:entryValue "<관리자 IP>" ;
+    cto:verificationStatus "실로그확인필요" ;
+    rdfs:comment "클러스터의 실제 서비스 계정·관리자 IP·admin 역할 ID 로 교체 (allowlist.json 으로도 지정 가능)"@ko .
+
+kb:allow_admin_role a cto:AllowlistEntry ;
+    cto:entryKind "admin_role_id" ;
+    cto:entryValue "<admin 역할 ID>" ;
+    cto:verificationStatus "실로그확인필요" ;
+    rdfs:comment "클러스터의 실제 서비스 계정·관리자 IP·admin 역할 ID 로 교체 (allowlist.json 으로도 지정 가능)"@ko .
+
+kb:allow_trusted_image a cto:AllowlistEntry ;
+    cto:entryKind "trusted_image" ;
+    cto:entryValue "<신뢰 이미지 ID>" ;
+    cto:verificationStatus "실로그확인필요" ;
+    rdfs:comment "클러스터의 실제 서비스 계정·관리자 IP·admin 역할 ID 로 교체 (allowlist.json 으로도 지정 가능)"@ko .
+
+kb:allow_trusted_project a cto:AllowlistEntry ;
+    cto:entryKind "trusted_project" ;
+    cto:entryValue "<신뢰 프로젝트 ID>" ;
+    cto:verificationStatus "실로그확인필요" ;
+    rdfs:comment "클러스터의 실제 서비스 계정·관리자 IP·admin 역할 ID 로 교체 (allowlist.json 으로도 지정 가능)"@ko .

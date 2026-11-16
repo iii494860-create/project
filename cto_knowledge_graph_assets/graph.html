@@ -1,0 +1,18 @@
+<div class="kg-shell">
+  <div class="kg-tools" role="toolbar" aria-label="그래프 화면 조작">
+    <button type="button" data-action="zoom-in" aria-label="그래프 확대">+</button>
+    <button type="button" data-action="zoom-out" aria-label="그래프 축소">−</button>
+    <button type="button" data-action="fit">전체 맞춤</button>
+    <button type="button" data-action="layout">배치 정돈</button>
+    <label class="kg-filter-label" for="kg-kind-filter">표시 유형</label>
+    <select id="kg-kind-filter" class="kg-kind-filter" aria-label="노드 표시 유형">
+      <option value="all">전체 노드</option>
+      <option value="no-events">ObservedEvent 제외</option>
+    </select>
+    <button type="button" data-action="focus-edges" aria-pressed="false">선택 관계만</button>
+    <span class="kg-scale" aria-live="polite"></span>
+  </div>
+  <canvas tabindex="0" aria-label="Neo4j 관계 그래프. 노드를 클릭하거나 위 노드 선택창을 이용하세요."></canvas>
+  <div class="kg-tip" role="status"></div>
+  <div class="kg-hint">화살표: 관계 방향 · 외곽 링: 선택 노드 · 숫자: 중심으로부터 hop</div>
+</div>

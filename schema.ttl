@@ -1,0 +1,436 @@
+@prefix cto:  <https://3k1h.example.org/cto#> .
+@prefix d3f:  <http://d3fend.mitre.org/ontologies/d3fend.owl#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# =====================================================================
+#  CTO (Cloud Threat Ontology) 스키마 v0.5  -  3K1H 캡스톤
+#  범위: OpenStack Keystone · Nova · Neutron
+#
+#  에이전트 역할: 위협 "분석" 에이전트
+#    - 자동: 탐지, 공격 체인 분석, 읽기 전용 조사, 설명
+#    - 사람: 대응 조치 (에이전트는 권고, 관리자 승인 후 실행)
+#
+#  온톨로지가 답해야 할 질문
+#    Q1. 이 로그는 어떤 행위이고, 어떤 공격일 수 있는가?
+#    Q2. 이 공격 다음에는 무엇이 올 수 있는가?
+#    Q3. 무엇을 조사하고, 어떻게 대응하도록 권고할 것인가?
+#
+#  층 구조
+#    [A] 지식층   - 공식 문서/데이터 + 팀 설계에서 생성 (한 번 구축)
+#    [B] 인스턴스층 - 실시간 로그에서 생성
+#
+#  모든 지식 노드는 cto:derivedFrom(출처)와 cto:verificationStatus(검증 상태)를 가짐
+# =====================================================================
+
+cto: a owl:Ontology ;
+    rdfs:label "Cloud Threat Ontology"@en , "클라우드 위협 온톨로지"@ko ;
+    owl:versionInfo "0.5" .
+
+# =====================================================================
+#  [A-1] 출처와 검증 상태
+# =====================================================================
+cto:SourceDocument a owl:Class ;
+    rdfs:label "출처 문서"@ko ;
+    rdfs:comment "지식의 근거. RAG 답변의 근거 표시와 할루시네이션 검증에 사용"@ko .
+
+cto:derivedFrom a owl:ObjectProperty ;
+    rdfs:label "근거 문서"@ko ; rdfs:range cto:SourceDocument .
+
+cto:url a owl:DatatypeProperty ;
+    rdfs:label "URL"@ko ; rdfs:domain cto:SourceDocument ; rdfs:range xsd:anyURI .
+
+cto:verificationStatus a owl:DatatypeProperty ;
+    rdfs:label "검증 상태"@ko ;
+    rdfs:comment "공식문서확인 / 팀설계 / 실로그확인필요 / 명령확인필요 중 하나. 실로그확인필요 항목은 클러스터 실제 로그로 확인 후 공식문서확인으로 변경"@ko ;
+    rdfs:range xsd:string .
+
+cto:externalId a owl:DatatypeProperty ;
+    rdfs:label "외부 ID"@ko ;
+    rdfs:comment "ATT&CK/D3FEND/OSSA ID. 예: T1110, M1036, D3-AL. LLM 출력 검증의 기준값"@ko ;
+    rdfs:range xsd:string .
+
+# =====================================================================
+#  [A-2] OpenStack 구조: 서비스, 로그 채널, 자원 유형, 행위 유형
+# =====================================================================
+cto:OpenStackService a owl:Class ;
+    rdfs:label "OpenStack 서비스"@ko .
+
+cto:LogChannel a owl:Class ;
+    rdfs:label "로그 채널"@ko ;
+    rdfs:comment "로그가 만들어지는 경로. 예: Keystone CADF 알림, Nova versioned 알림, Neutron 알림, keystonemiddleware audit"@ko .
+
+cto:ResourceType a owl:Class ;
+    rdfs:label "자원 유형"@ko ;
+    rdfs:comment "행위의 대상이 되는 자원 종류. 예: 사용자, 역할 할당, 인스턴스, 보안그룹 규칙"@ko .
+
+cto:ActionType a owl:Class ;
+    rdfs:label "행위 유형"@ko ;
+    rdfs:comment "CADF 표준 행위 분류(pyCADF ACTION_TAXONOMY). 예: create, update, delete, authenticate, read/list"@ko .
+
+cto:providedBy a owl:ObjectProperty ;
+    rdfs:label "제공 서비스"@ko ; rdfs:domain cto:ResourceType ; rdfs:range cto:OpenStackService .
+
+cto:typeURI a owl:DatatypeProperty ;
+    rdfs:label "CADF typeURI"@ko ;
+    rdfs:comment "CADF 이벤트의 target.typeURI 값 또는 audit map의 경로 키워드"@ko ;
+    rdfs:range xsd:string .
+
+cto:apiResourceName a owl:DatatypeProperty ;
+    rdfs:label "API 리소스 이름"@ko ;
+    rdfs:comment "알림 event_type에 쓰이는 리소스 이름. 예: security_group_rule, floatingip"@ko ;
+    rdfs:domain cto:ResourceType ; rdfs:range xsd:string .
+
+cto:sensitivity a owl:DatatypeProperty ;
+    rdfs:label "민감도"@ko ;
+    rdfs:comment "high / medium / low. 권한·자격증명·방화벽 관련 자원은 high"@ko ;
+    rdfs:domain cto:ResourceType ; rdfs:range xsd:string .
+
+cto:cadfAction a owl:DatatypeProperty ;
+    rdfs:label "CADF 행위 값"@ko ; rdfs:domain cto:ActionType ; rdfs:range xsd:string .
+
+# =====================================================================
+#  [A-3] 로그 이벤트 유형과 필드
+# =====================================================================
+cto:LogEventType a owl:Class ;
+    rdfs:label "로그 이벤트 유형"@ko ;
+    rdfs:comment "로그에 찍히는 이벤트의 종류. 실제 발생한 로그 한 줄은 [B]의 ObservedEvent"@ko .
+
+cto:LogField a owl:Class ;
+    rdfs:label "로그 필드"@ko .
+
+cto:eventTypeName a owl:DatatypeProperty ;
+    rdfs:label "이벤트 이름"@ko ;
+    rdfs:comment "알림의 event_type 값. 예: identity.authenticate, instance.create.end, security_group_rule.create.end"@ko ;
+    rdfs:domain cto:LogEventType ; rdfs:range xsd:string .
+
+cto:outcome a owl:DatatypeProperty ;
+    rdfs:label "결과 조건"@ko ;
+    rdfs:comment "CADF outcome: success / failure / pending. 지정하지 않으면 결과와 무관"@ko ;
+    rdfs:domain cto:LogEventType ; rdfs:range xsd:string .
+
+cto:emittedBy a owl:ObjectProperty ;
+    rdfs:label "발생 서비스"@ko ; rdfs:domain cto:LogEventType ; rdfs:range cto:OpenStackService .
+
+cto:viaChannel a owl:ObjectProperty ;
+    rdfs:label "로그 채널"@ko ; rdfs:domain cto:LogEventType ; rdfs:range cto:LogChannel .
+
+cto:hasAction a owl:ObjectProperty ;
+    rdfs:label "행위"@ko ; rdfs:domain cto:LogEventType ; rdfs:range cto:ActionType .
+
+cto:onResourceType a owl:ObjectProperty ;
+    rdfs:label "대상 자원 유형"@ko ; rdfs:domain cto:LogEventType ; rdfs:range cto:ResourceType .
+
+cto:hasField a owl:ObjectProperty ;
+    rdfs:label "필드 포함"@ko ; rdfs:domain cto:LogEventType ; rdfs:range cto:LogField .
+
+cto:fieldPath a owl:DatatypeProperty ;
+    rdfs:label "필드 경로"@ko ;
+    rdfs:comment "JSON 경로. 예: payload.initiator.host.address"@ko ;
+    rdfs:domain cto:LogField ; rdfs:range xsd:string .
+
+cto:refersTo a owl:ObjectProperty ;
+    rdfs:label "가리키는 자원 유형"@ko ;
+    rdfs:comment "이 필드 값이 어떤 자원의 ID인지. 서비스 간 연결(예: Nova port_uuid ↔ Neutron port)에 사용"@ko ;
+    rdfs:domain cto:LogField ; rdfs:range cto:ResourceType .
+
+cto:isCorrelationKey a owl:DatatypeProperty ;
+    rdfs:label "연결 키 여부"@ko ;
+    rdfs:comment "true 이면 사건 묶기(같은 행위자·같은 요청)에 쓰는 필드. 예: 사용자 ID, 출발지 IP, request_id"@ko ;
+    rdfs:domain cto:LogField ; rdfs:range xsd:boolean .
+
+# =====================================================================
+#  [A-4] 행위 분류 ("행위 × 자원" 일반화) - 시나리오 밖 공격 분석의 핵심
+# =====================================================================
+cto:BehaviorClass a owl:Class ;
+    rdfs:label "행위 분류"@ko ;
+    rdfs:comment "행위 유형과 자원 유형의 조합으로 정의한 일반 행위 범주. 등록되지 않은 이벤트도 행위·자원으로 분류됨. 예: 권한 부여, 방화벽 완화, 컴퓨트 자원 생성"@ko .
+
+cto:matchesAction a owl:ObjectProperty ;
+    rdfs:label "해당 행위"@ko ; rdfs:domain cto:BehaviorClass ; rdfs:range cto:ActionType .
+
+cto:matchesResourceType a owl:ObjectProperty ;
+    rdfs:label "해당 자원"@ko ; rdfs:domain cto:BehaviorClass ; rdfs:range cto:ResourceType .
+
+cto:matchesOutcome a owl:DatatypeProperty ;
+    rdfs:label "해당 결과"@ko ; rdfs:domain cto:BehaviorClass ; rdfs:range xsd:string .
+
+cto:classifiedAs a owl:ObjectProperty ;
+    rdfs:label "행위 분류"@ko ; rdfs:domain cto:LogEventType ; rdfs:range cto:BehaviorClass .
+
+cto:riskScore a owl:DatatypeProperty ;
+    rdfs:label "위험 점수"@ko ;
+    rdfs:comment "행위 1회당 행위자에게 누적되는 점수(초기 설계값, 실측으로 조정)"@ko ;
+    rdfs:range xsd:integer .
+
+cto:suggestsTechnique a owl:ObjectProperty ;
+    rdfs:label "관련 공격 기법 후보"@ko ;
+    rdfs:comment "이 행위가 해당 ATT&CK 기법의 일부일 수 있음(후보). 단독으로 공격 판정하지 않음"@ko ;
+    rdfs:domain cto:BehaviorClass ; rdfs:range cto:Technique .
+
+# =====================================================================
+#  [A-5] 공격 지식 (MITRE ATT&CK 자동 생성)
+# =====================================================================
+cto:Tactic a owl:Class ;
+    rdfs:label "공격 전술 (ATT&CK Tactic)"@ko .
+cto:Technique a owl:Class ;
+    rdfs:label "공격 기법 (ATT&CK Technique)"@ko .
+cto:Mitigation a owl:Class ;
+    rdfs:label "완화책 (ATT&CK Mitigation)"@ko ;
+    rdfs:comment "예방책(재발 방지 권고). 사고 대응 조치는 ResponseAction"@ko .
+cto:DetectionStrategy a owl:Class ;
+    rdfs:label "탐지 전략 (ATT&CK DETxxxx)"@ko .
+cto:Analytic a owl:Class ;
+    rdfs:label "분석 로직 (ATT&CK ANxxxx)"@ko ;
+    rdfs:comment "대부분 AWS/Azure/GCP 기준. OpenStack 규칙 설계의 참고 자료"@ko .
+
+cto:belongsToTactic a owl:ObjectProperty ;
+    rdfs:label "소속 전술"@ko ; rdfs:domain cto:Technique ; rdfs:range cto:Tactic .
+cto:subTechniqueOf a owl:ObjectProperty ;
+    rdfs:label "상위 기법"@ko ; rdfs:domain cto:Technique ; rdfs:range cto:Technique .
+cto:mitigatedBy a owl:ObjectProperty ;
+    rdfs:label "완화책"@ko ; rdfs:domain cto:Technique ; rdfs:range cto:Mitigation .
+cto:detects a owl:ObjectProperty ;
+    rdfs:label "탐지 대상 기법"@ko ;
+    rdfs:comment "주어는 DetectionStrategy 또는 DetectionRule"@ko ; rdfs:range cto:Technique .
+cto:hasAnalytic a owl:ObjectProperty ;
+    rdfs:label "분석 로직"@ko ; rdfs:domain cto:DetectionStrategy ; rdfs:range cto:Analytic .
+cto:tacticOrder a owl:DatatypeProperty ;
+    rdfs:label "전술 순서"@ko ; rdfs:domain cto:Tactic ; rdfs:range xsd:integer .
+
+cto:precedes a owl:ObjectProperty ;
+    rdfs:label "다음 단계(설계)"@ko ;
+    rdfs:comment "팀이 설계한 공격 순서. A precedes B = A 다음에 B가 올 수 있음"@ko ;
+    rdfs:domain cto:Technique ; rdfs:range cto:Technique .
+
+cto:coOccursWith a owl:ObjectProperty ;
+    rdfs:label "함께 쓰인 기법(데이터)"@ko ;
+    rdfs:comment "ATT&CK의 공격 그룹·캠페인이 함께 사용한 기법. 설계되지 않은 공격의 다음 단계 추정 근거"@ko ;
+    rdfs:domain cto:Technique ; rdfs:range cto:Technique .
+
+cto:coOccurrenceCount a owl:DatatypeProperty ;
+    rdfs:label "동시 사용 횟수"@ko ;
+    rdfs:comment "두 기법을 함께 쓴 그룹·캠페인 수. 쌍마다 cto:CoOccurrence 노드에 기록"@ko ;
+    rdfs:range xsd:integer .
+
+cto:CoOccurrence a owl:Class ;
+    rdfs:label "기법 동시 사용 기록"@ko .
+cto:techniqueA a owl:ObjectProperty ; rdfs:domain cto:CoOccurrence ; rdfs:range cto:Technique .
+cto:techniqueB a owl:ObjectProperty ; rdfs:domain cto:CoOccurrence ; rdfs:range cto:Technique .
+
+# =====================================================================
+#  [A-6] 방어 지식 (MITRE D3FEND 자동 생성)
+# =====================================================================
+cto:DefensiveTechnique a owl:Class ;
+    rdfs:label "방어 기법 (D3FEND)"@ko ;
+    owl:equivalentClass d3f:DefensiveTechnique .
+
+cto:mappedToD3FEND a owl:ObjectProperty ;
+    rdfs:label "D3FEND 매핑"@ko ;
+    rdfs:comment "D3FEND 공식 매핑(ATT&CK Mitigations to D3FEND)에서 생성"@ko ;
+    rdfs:domain cto:Mitigation ; rdfs:range cto:DefensiveTechnique .
+
+# =====================================================================
+#  [A-7] 탐지 규칙과 경보 등급
+# =====================================================================
+cto:AlertTier a owl:Class ;
+    rdfs:label "경보 등급"@ko ;
+    rdfs:comment "즉시 / 체인 / 점수 / 정보"@ko .
+
+cto:DetectionRule a owl:Class ;
+    rdfs:label "탐지 규칙"@ko ;
+    rdfs:comment "결정론적 탐지 엔진이 실행하는 규칙. LLM은 경보 여부를 결정하지 않음"@ko .
+
+cto:alertTier a owl:ObjectProperty ;
+    rdfs:label "경보 등급"@ko ; rdfs:range cto:AlertTier .
+cto:usesEvent a owl:ObjectProperty ;
+    rdfs:label "사용 이벤트"@ko ; rdfs:domain cto:DetectionRule ; rdfs:range cto:LogEventType .
+cto:usesBehavior a owl:ObjectProperty ;
+    rdfs:label "사용 행위 분류"@ko ; rdfs:domain cto:DetectionRule ; rdfs:range cto:BehaviorClass .
+cto:condition a owl:DatatypeProperty ;
+    rdfs:label "탐지 조건(설명)"@ko ;
+    rdfs:comment "사람이 읽는 설명. 엔진이 실행하는 조건은 ruleType/filter/groupBy/sequenceStep"@ko ;
+    rdfs:domain cto:DetectionRule ; rdfs:range xsd:string .
+
+cto:ruleType a owl:DatatypeProperty ;
+    rdfs:label "규칙 종류"@ko ;
+    rdfs:comment "filter: 이벤트 하나가 filter 를 모두 만족 / threshold: groupBy 값별로 window 안 건수 ≥ threshold / sequence: 같은 groupBy 값에서 sequenceStep 순서대로 발생 / score: groupBy 값별 riskScore 합 ≥ threshold"@ko ;
+    rdfs:domain cto:DetectionRule ; rdfs:range xsd:string .
+
+cto:filter a owl:DatatypeProperty ;
+    rdfs:label "필터(실행용)"@ko ;
+    rdfs:comment "여러 개는 AND. 형식: '<필드경로> <연산> <값>'. 연산: == != in(값|값) empty notempty covers_port(포트|포트|any) in_allowlist(<종류>) not_in_allowlist(<종류>) ne_field(<다른 필드경로>). 특수 경로 @user @ip @project @new_source"@ko ;
+    rdfs:domain cto:DetectionRule ; rdfs:range xsd:string .
+
+cto:groupBy a owl:DatatypeProperty ;
+    rdfs:label "집계 키"@ko ;
+    rdfs:comment "threshold/sequence/score 규칙에서 묶는 기준. 필드 경로 또는 @user @ip @project @actor(user 없으면 ip)"@ko ;
+    rdfs:domain cto:DetectionRule ; rdfs:range xsd:string .
+
+cto:sequenceStep a owl:DatatypeProperty ;
+    rdfs:label "순서 단계"@ko ;
+    rdfs:comment "'<순번>:<행위분류 또는 규칙 노드>'. 예: '1:bc_auth_failure', '2:bc_auth_success', '1:rule_bruteforce'(앞 단계가 경보일 때)"@ko ;
+    rdfs:domain cto:DetectionRule ; rdfs:range xsd:string .
+
+cto:distinctField a owl:DatatypeProperty ;
+    rdfs:label "서로 다른 값을 셀 필드"@ko ;
+    rdfs:comment "threshold 규칙에서 groupBy 묶음 안의 서로 다른 값 개수를 셀 필드. 예: 스프레이 = 같은 IP에서 서로 다른 계정 수. 해당 필드가 로그에 전혀 없으면(구버전 등) 이 조건은 건너뜀"@ko ;
+    rdfs:domain cto:DetectionRule ; rdfs:range xsd:string .
+
+cto:distinctMin a owl:DatatypeProperty ;
+    rdfs:label "서로 다른 값 최소 개수"@ko ; rdfs:domain cto:DetectionRule ; rdfs:range xsd:integer .
+
+cto:minCount a owl:DatatypeProperty ;
+    rdfs:label "마지막 단계 최소 건수"@ko ; rdfs:domain cto:DetectionRule ; rdfs:range xsd:integer .
+cto:threshold a owl:DatatypeProperty ;
+    rdfs:label "임계값"@ko ; rdfs:domain cto:DetectionRule ; rdfs:range xsd:integer .
+cto:windowSeconds a owl:DatatypeProperty ;
+    rdfs:label "시간 창(초)"@ko ; rdfs:domain cto:DetectionRule ; rdfs:range xsd:integer .
+cto:severity a owl:DatatypeProperty ;
+    rdfs:label "심각도"@ko ; rdfs:comment "low / medium / high / critical"@ko ; rdfs:range xsd:string .
+
+# =====================================================================
+#  [A-8] 조사(자동, 읽기 전용)와 대응(권고, 승인 후 실행)
+# =====================================================================
+cto:InvestigationQuery a owl:Class ;
+    rdfs:label "자동 조사 항목"@ko ;
+    rdfs:comment "경보 발생 시 에이전트가 자동 실행하는 읽기 전용 조회 명령"@ko .
+
+cto:ResponseAction a owl:Class ;
+    rdfs:label "대응 조치 (권고)"@ko ;
+    rdfs:comment "에이전트가 권고하고 관리자가 승인하면 실행되는 조치"@ko .
+
+cto:CommandParameter a owl:Class ;
+    rdfs:label "명령 인자"@ko ;
+    rdfs:comment "명령의 <자리표시자>를 어떤 로그 필드 값으로 채우는지. LLM이 인자를 만들지 않도록 보장"@ko .
+
+cto:investigateWith a owl:ObjectProperty ;
+    rdfs:label "자동 조사"@ko ; rdfs:range cto:InvestigationQuery ;
+    rdfs:comment "주어는 Technique 또는 BehaviorClass"@ko .
+cto:recommendedResponse a owl:ObjectProperty ;
+    rdfs:label "권고 대응"@ko ; rdfs:domain cto:Technique ; rdfs:range cto:ResponseAction .
+cto:implements a owl:ObjectProperty ;
+    rdfs:label "해당 방어 기법"@ko ; rdfs:domain cto:ResponseAction ; rdfs:range cto:DefensiveTechnique .
+
+cto:command a owl:DatatypeProperty ;
+    rdfs:label "명령"@ko ; rdfs:range xsd:string .
+cto:rollbackCommand a owl:DatatypeProperty ;
+    rdfs:label "되돌리기 명령"@ko ; rdfs:domain cto:ResponseAction ; rdfs:range xsd:string .
+cto:requiresApproval a owl:DatatypeProperty ;
+    rdfs:label "승인 필요"@ko ; rdfs:domain cto:ResponseAction ; rdfs:range xsd:boolean .
+cto:purpose a owl:DatatypeProperty ;
+    rdfs:label "목적"@ko ; rdfs:range xsd:string .
+
+cto:hasParameter a owl:ObjectProperty ;
+    rdfs:label "인자"@ko ; rdfs:range cto:CommandParameter .
+cto:placeholder a owl:DatatypeProperty ;
+    rdfs:label "자리표시자"@ko ; rdfs:domain cto:CommandParameter ; rdfs:range xsd:string .
+cto:valueFrom a owl:ObjectProperty ;
+    rdfs:label "값 출처 필드"@ko ; rdfs:domain cto:CommandParameter ; rdfs:range cto:LogField .
+
+# =====================================================================
+#  [A-9] 정상 기준 (오탐 방지)
+# =====================================================================
+cto:AllowlistEntry a owl:Class ;
+    rdfs:label "허용 목록 항목"@ko ;
+    rdfs:comment "정상 행위자·자원. 예: 서비스 계정(nova, neutron), 관리자 IP, 자동화 계정. 실제 값은 배포 환경에서 채움"@ko .
+cto:entryKind a owl:DatatypeProperty ;
+    rdfs:label "항목 종류"@ko ; rdfs:comment "service_account / admin_ip / automation_account / protected_resource / admin_role_id / trusted_image / trusted_project. 엔진은 allowlist.json 으로 덮어쓸 수 있음"@ko ;
+    rdfs:domain cto:AllowlistEntry ; rdfs:range xsd:string .
+cto:entryValue a owl:DatatypeProperty ;
+    rdfs:label "값"@ko ; rdfs:domain cto:AllowlistEntry ; rdfs:range xsd:string .
+
+# =====================================================================
+#  [A-10] OpenStack 취약점 맥락 (OSSA/OSSN 자동 생성)
+# =====================================================================
+cto:Vulnerability a owl:Class ;
+    rdfs:label "취약점·보안 권고"@ko .
+cto:affects a owl:ObjectProperty ;
+    rdfs:label "영향 서비스"@ko ; rdfs:domain cto:Vulnerability ; rdfs:range cto:OpenStackService .
+
+# =====================================================================
+#  [B] 인스턴스층 - 실시간 로그에서 생성
+# =====================================================================
+cto:ObservedEvent a owl:Class ;
+    rdfs:label "관측 이벤트"@ko ; rdfs:comment "실제 발생한 로그 한 줄"@ko .
+
+cto:Actor a owl:Class ; rdfs:label "행위자"@ko .
+cto:User a owl:Class ; rdfs:subClassOf cto:Actor ; rdfs:label "사용자"@ko .
+cto:IPAddress a owl:Class ; rdfs:subClassOf cto:Actor ; rdfs:label "IP 주소"@ko .
+
+cto:CloudResource a owl:Class ; rdfs:label "클라우드 자원"@ko .
+cto:Project           a owl:Class ; rdfs:subClassOf cto:CloudResource ; rdfs:label "프로젝트"@ko .
+cto:Role              a owl:Class ; rdfs:subClassOf cto:CloudResource ; rdfs:label "역할"@ko .
+cto:Server            a owl:Class ; rdfs:subClassOf cto:CloudResource ; rdfs:label "인스턴스"@ko .
+cto:Port              a owl:Class ; rdfs:subClassOf cto:CloudResource ; rdfs:label "포트"@ko .
+cto:SecurityGroup     a owl:Class ; rdfs:subClassOf cto:CloudResource ; rdfs:label "보안그룹"@ko .
+cto:SecurityGroupRule a owl:Class ; rdfs:subClassOf cto:CloudResource ; rdfs:label "보안그룹 규칙"@ko .
+cto:FloatingIP        a owl:Class ; rdfs:subClassOf cto:CloudResource ; rdfs:label "Floating IP"@ko .
+
+cto:instanceOfType a owl:ObjectProperty ;
+    rdfs:label "자원 유형"@ko ; rdfs:domain cto:CloudResource ; rdfs:range cto:ResourceType .
+cto:resourceId a owl:DatatypeProperty ;
+    rdfs:label "자원 ID"@ko ; rdfs:range xsd:string .
+
+# 이벤트
+cto:hasEventType a owl:ObjectProperty ;
+    rdfs:label "이벤트 유형"@ko ;
+    rdfs:comment "[B]→[A]를 잇는 다리"@ko ;
+    rdfs:domain cto:ObservedEvent ; rdfs:range cto:LogEventType .
+cto:performedBy a owl:ObjectProperty ;
+    rdfs:label "행위자"@ko ; rdfs:domain cto:ObservedEvent ; rdfs:range cto:User .
+cto:fromIP a owl:ObjectProperty ;
+    rdfs:label "출발지 IP"@ko ; rdfs:domain cto:ObservedEvent ; rdfs:range cto:IPAddress .
+cto:targets a owl:ObjectProperty ;
+    rdfs:label "대상 자원"@ko ; rdfs:domain cto:ObservedEvent ; rdfs:range cto:CloudResource .
+cto:observedAt a owl:DatatypeProperty ;
+    rdfs:label "발생 시각"@ko ; rdfs:domain cto:ObservedEvent ; rdfs:range xsd:dateTime .
+cto:requestId a owl:DatatypeProperty ;
+    rdfs:label "요청 ID"@ko ;
+    rdfs:comment "Neutron 알림처럼 사용자 정보가 없는 이벤트를 audit 로그와 연결할 때 사용"@ko ;
+    rdfs:domain cto:ObservedEvent ; rdfs:range xsd:string .
+cto:rawLog a owl:DatatypeProperty ;
+    rdfs:label "원본 로그"@ko ; rdfs:domain cto:ObservedEvent ; rdfs:range xsd:string .
+cto:inProject a owl:ObjectProperty ;
+    rdfs:label "이벤트 발생 프로젝트"@ko ;
+    rdfs:comment "팀설계: 이벤트가 일어난 프로젝트(요청 범위). 자원의 소속(belongsToProject)과 구분. 이벤트의 project 속성과 같은 값으로 함께 기록"@ko ;
+    rdfs:domain cto:ObservedEvent ; rdfs:range cto:Project .
+
+# 자원 간 관계 (공격 체인 추적용)
+cto:createdBy a owl:ObjectProperty ;
+    rdfs:label "생성자"@ko ; rdfs:domain cto:CloudResource ; rdfs:range cto:User .
+cto:belongsToProject a owl:ObjectProperty ;
+    rdfs:label "소속 프로젝트"@ko ; rdfs:domain cto:CloudResource ; rdfs:range cto:Project .
+cto:attachedToServer a owl:ObjectProperty ;
+    rdfs:label "연결된 인스턴스"@ko ; rdfs:domain cto:Port ; rdfs:range cto:Server .
+cto:associatedWithPort a owl:ObjectProperty ;
+    rdfs:label "연결된 포트"@ko ; rdfs:domain cto:FloatingIP ; rdfs:range cto:Port .
+cto:usesSecurityGroup a owl:ObjectProperty ;
+    rdfs:label "적용 보안그룹"@ko ; rdfs:domain cto:Port ; rdfs:range cto:SecurityGroup .
+cto:ruleOf a owl:ObjectProperty ;
+    rdfs:label "소속 보안그룹"@ko ; rdfs:domain cto:SecurityGroupRule ; rdfs:range cto:SecurityGroup .
+cto:hasRoleOn a owl:ObjectProperty ;
+    rdfs:label "역할 보유"@ko ;
+    rdfs:comment "사용자가 프로젝트에서 가진 역할. 역할 할당 이벤트로 갱신"@ko ;
+    rdfs:domain cto:User ; rdfs:range cto:Role .
+
+# 경보와 사건
+cto:Alert a owl:Class ; rdfs:label "경보"@ko .
+cto:Incident a owl:Class ;
+    rdfs:label "공격 사건"@ko ;
+    rdfs:comment "같은 행위자·연결된 자원으로 이어진 경보 묶음. 연쇄 공격 분석의 결과 단위"@ko .
+
+cto:triggeredBy a owl:ObjectProperty ;
+    rdfs:label "원인 이벤트"@ko ; rdfs:domain cto:Alert ; rdfs:range cto:ObservedEvent .
+cto:matchedRule a owl:ObjectProperty ;
+    rdfs:label "일치 규칙"@ko ; rdfs:domain cto:Alert ; rdfs:range cto:DetectionRule .
+cto:suspectedTechnique a owl:ObjectProperty ;
+    rdfs:label "의심 기법"@ko ; rdfs:range cto:Technique .
+cto:groupedInto a owl:ObjectProperty ;
+    rdfs:label "소속 사건"@ko ; rdfs:domain cto:Alert ; rdfs:range cto:Incident .
+cto:involvesActor a owl:ObjectProperty ;
+    rdfs:label "관련 행위자"@ko ; rdfs:domain cto:Incident ; rdfs:range cto:Actor .
+cto:accumulatedRisk a owl:DatatypeProperty ;
+    rdfs:label "누적 위험 점수"@ko ; rdfs:domain cto:Incident ; rdfs:range xsd:integer .

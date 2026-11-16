@@ -1,0 +1,15 @@
+:host { color-scheme:dark; }
+.kg-shell { position:relative; height:560px; box-sizing:border-box; overflow:hidden; border:1px solid #31435e; border-radius:14px; background:radial-gradient(ellipse at 40% 40%,#17243a,#0d1525); color:#f0f4ff; font-family:system-ui,-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif; }
+canvas { display:block; width:100%; height:100%; touch-action:none; outline:none; cursor:grab; }
+canvas:focus-visible { outline:2px solid #8e9eff; outline-offset:-3px; }
+.kg-tools { position:absolute; z-index:2; left:12px; top:12px; display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.kg-tools button { border:1px solid #415573; background:#202f49; color:#f0f4ff; border-radius:7px; padding:7px 11px; cursor:pointer; font:600 12px system-ui,"Malgun Gothic",sans-serif; }
+.kg-tools button:hover,.kg-tools button:focus-visible { border-color:#8e9eff; background:#2c3f61; }
+.kg-scale { font-size:11px; margin-left:5px; color:#a8b7d0; }
+.kg-tip { position:absolute; z-index:3; pointer-events:none; display:none; max-width:260px; white-space:pre-wrap; overflow-wrap:anywhere; background:#0a1020; border:1px solid #415573; border-radius:7px; color:#f0f4ff; font-size:12px; padding:8px 10px; }
+.kg-hint { position:absolute; bottom:10px; left:12px; right:12px; pointer-events:none; color:#a8b7d0; font-size:11px; }
+
+.kg-kind-filter {background:#202f49;color:#f0f4ff;border:1px solid #415573;border-radius:7px;padding:7px 8px;font:600 12px system-ui,"Malgun Gothic",sans-serif;max-width:175px;}
+.kg-filter-label {font-size:12px;color:#dbe5ff;margin-left:8px;}
+.kg-tools button[aria-pressed="true"] {background:#365d87;border-color:#9ac6fc;}
+@media (max-width:700px) {.kg-filter-label {display:none;} .kg-kind-filter {max-width:130px;} }

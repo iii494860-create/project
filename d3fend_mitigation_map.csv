@@ -1,0 +1,90 @@
+mitigation_id,d3fend_id,d3fend_class,d3fend_label,definition
+M1015,D3-DTP,DomainTrustPolicy,Domain Trust Policy,Restricting inter-domain trust by modifying domain configuration.
+M1015,D3-ANCI,AuthenticationCacheInvalidation,Authentication Cache Invalidation,Removing tokens or credentials from an authentication cache to prevent further user associated account accesses.
+M1015,D3-UAP,UserAccountPermissions,User Account Permissions,Restricting a user account's access to resources.
+M1018,D3-LFP,LocalFilePermissions,Local File Permissions,"Local file permissions is the systematic process of defining, implementing, and managing access control policies that dictate user permissions for accessing files on a local system through the configuration of operating system functionality."
+M1018,D3-SCF,SystemCallFiltering,System Call Filtering,Controlling access to local computer system resources with kernel-level capabilities.
+M1018,D3-SCP,SystemConfigurationPermissions,System Configuration Permissions,Restricting system configuration modifications to a specific user or group of users.
+M1020,D3-NTA,NetworkTrafficAnalysis,Network Traffic Analysis,Analyzing intercepted or summarized computer network traffic to detect unauthorized activity.
+M1021,D3-ITF,InboundTrafficFiltering,Inbound Traffic Filtering,Restricting network traffic originating from untrusted networks destined towards a private host or enclave.
+M1021,D3-DNSDL,DNSDenylisting,DNS Denylisting,"Blocking DNS Network Traffic based on criteria such as IP address, domain name, or DNS query type."
+M1021,D3-DNSAL,DNSAllowlisting,DNS Allowlisting,Permitting only approved domains and their subdomains to be resolved.
+M1021,D3-NTA,NetworkTrafficAnalysis,Network Traffic Analysis,Analyzing intercepted or summarized computer network traffic to detect unauthorized activity.
+M1021,D3-FA,FileAnalysis,File Analysis,"File Analysis is an analytic process to determine a file's status. For example: virus, trojan, benign, malicious, trusted, unauthorized, sensitive, etc."
+M1021,D3-OTF,OutboundTrafficFiltering,Outbound Traffic Filtering,Restricting network traffic originating from a private host or enclave destined towards untrusted networks.
+M1021,D3-UA,URLAnalysis,URL Analysis,Determining if a URL is benign or malicious by analyzing the URL or its components.
+M1022,D3-LFP,LocalFilePermissions,Local File Permissions,"Local file permissions is the systematic process of defining, implementing, and managing access control policies that dictate user permissions for accessing files on a local system through the configuration of operating system functionality."
+M1024,D3-SCP,SystemConfigurationPermissions,System Configuration Permissions,Restricting system configuration modifications to a specific user or group of users.
+M1025,D3-BA,BootloaderAuthentication,Bootloader Authentication,Cryptographically authenticating the bootloader software before system boot.
+M1025,D3-PSEP,ProcessSegmentExecutionPrevention,Process Segment Execution Prevention,Preventing execution of any address in a memory region other than the code segment.
+M1025,D3-SCF,SystemCallFiltering,System Call Filtering,Controlling access to local computer system resources with kernel-level capabilities.
+M1025,D3-DLIC,DriverLoadIntegrityChecking,Driver Load Integrity Checking,Ensuring the integrity of drivers loaded during initialization of the operating system.
+M1026,D3-LAM,LocalAccountMonitoring,Local Account Monitoring,Analyzing local user accounts to detect unauthorized activity.
+M1026,D3-DAM,DomainAccountMonitoring,Domain Account Monitoring,Monitoring the existence of or changes to Domain User Accounts.
+M1026,D3-SPP,StrongPasswordPolicy,Strong Password Policy,Modifying system configuration to increase password strength.
+M1027,D3-OTP,One-timePassword,One-time Password,A one-time password is valid for only one user authentication.
+M1027,D3-SPP,StrongPasswordPolicy,Strong Password Policy,Modifying system configuration to increase password strength.
+M1028,D3-PH,PlatformHardening,Platform Hardening,Hardening components of a Platform with the intention of making them more difficult to exploit.
+M1030,D3-ET,EncryptedTunnels,Encrypted Tunnels,Encrypted encapsulation of routable network traffic.
+M1030,D3-ITF,InboundTrafficFiltering,Inbound Traffic Filtering,Restricting network traffic originating from untrusted networks destined towards a private host or enclave.
+M1030,D3-BDI,BroadcastDomainIsolation,Broadcast Domain Isolation,Broadcast isolation restricts the number of computers a host can contact on their LAN.
+M1030,D3-ISVA,InboundSessionVolumeAnalysis,Inbound Session Volume Analysis,Analyzing inbound network session or connection attempt volume.
+M1031,D3-ITF,InboundTrafficFiltering,Inbound Traffic Filtering,Restricting network traffic originating from untrusted networks destined towards a private host or enclave.
+M1031,D3-NTA,NetworkTrafficAnalysis,Network Traffic Analysis,Analyzing intercepted or summarized computer network traffic to detect unauthorized activity.
+M1031,D3-OTF,OutboundTrafficFiltering,Outbound Traffic Filtering,Restricting network traffic originating from a private host or enclave destined towards untrusted networks.
+M1032,D3-MFA,Multi-factorAuthentication,Multi-factor Authentication,Requiring proof of two or more pieces of evidence in order to authenticate a user.
+M1033,D3-EAL,ExecutableAllowlisting,Executable Allowlisting,Using a digital signature to authenticate a file before opening.
+M1033,D3-EDL,ExecutableDenylisting,Executable Denylisting,Blocking the execution of files on a host in accordance with defined application policy rules.
+M1034,D3-IOPR,IOPortRestriction,IO Port Restriction,Limiting access to computer input/output (IO) ports to restrict unauthorized devices.
+M1035,D3-NI,NetworkIsolation,Network Isolation,Network Isolation techniques prevent network hosts from accessing non-essential system network resources.
+M1036,D3-AL,AccountLocking,Account Locking,The process of temporarily disabling user accounts on a system or domain.
+M1036,D3-ANCI,AuthenticationCacheInvalidation,Authentication Cache Invalidation,Removing tokens or credentials from an authentication cache to prevent further user associated account accesses.
+M1036,D3-ANET,AuthenticationEventThresholding,Authentication Event Thresholding,"Collecting authentication events, creating a baseline user profile, and determining whether authentication events are consistent with the baseline profile."
+M1037,D3-NI,NetworkIsolation,Network Isolation,Network Isolation techniques prevent network hosts from accessing non-essential system network resources.
+M1038,D3-EAL,ExecutableAllowlisting,Executable Allowlisting,Using a digital signature to authenticate a file before opening.
+M1038,D3-PSEP,ProcessSegmentExecutionPrevention,Process Segment Execution Prevention,Preventing execution of any address in a memory region other than the code segment.
+M1038,D3-DLIC,DriverLoadIntegrityChecking,Driver Load Integrity Checking,Ensuring the integrity of drivers loaded during initialization of the operating system.
+M1038,D3-EDL,ExecutableDenylisting,Executable Denylisting,Blocking the execution of files on a host in accordance with defined application policy rules.
+M1039,D3-ACH,ApplicationConfigurationHardening,Application Configuration Hardening,Modifying an application's configuration to reduce its attack surface.
+M1039,D3-SFA,SystemFileAnalysis,System File Analysis,"Monitoring system files such as authentication databases, configuration files, system logs, and system executables for modification or tampering."
+M1040,D3-UDTA,UserDataTransferAnalysis,User Data Transfer Analysis,Analyzing the amount of data transferred by a user.
+M1040,D3-WSAA,WebSessionActivityAnalysis,Web Session Activity Analysis,Monitoring changes in user web session behavior by comparing current web session activity to a baseline behavior profile or a catalog of predetermined malicious behavior.
+M1040,D3-RAPA,ResourceAccessPatternAnalysis,Resource Access Pattern Analysis,Analyzing the resources accessed by a user to identify unauthorized activity.
+M1040,D3-JFAPA,JobFunctionAccessPatternAnalysis,Job Function Access Pattern Analysis,"Detecting anomalies in user access patterns by comparing user access activity to behavioral profiles that categorize users by role such as job title, function, department."
+M1040,D3-UGLPA,UserGeolocationLogonPatternAnalysis,User Geolocation Logon Pattern Analysis,Monitoring geolocation data of user logon attempts and comparing it to a baseline user behavior profile to identify anomalies in logon location.
+M1040,D3-AZET,AuthorizationEventThresholding,Authorization Event Thresholding,"Collecting authorization events, creating a baseline user profile, and determining whether authorization events are consistent with the baseline profile."
+M1040,D3-ANET,AuthenticationEventThresholding,Authentication Event Thresholding,"Collecting authentication events, creating a baseline user profile, and determining whether authentication events are consistent with the baseline profile."
+M1040,D3-SDA,SessionDurationAnalysis,Session Duration Analysis,Analyzing the duration of user sessions in order to detect unauthorized activity.
+M1041,D3-ET,EncryptedTunnels,Encrypted Tunnels,Encrypted encapsulation of routable network traffic.
+M1041,D3-DENCR,DiskEncryption,Disk Encryption,Encrypting a hard disk partition to prevent cleartext access to a file system.
+M1041,D3-FE,FileEncryption,File Encryption,Encrypting a file using a cryptographic key.
+M1041,D3-MENCR,MessageEncryption,Message Encryption,Encrypting a message body using a cryptographic key.
+M1042,D3-ACH,ApplicationConfigurationHardening,Application Configuration Hardening,Modifying an application's configuration to reduce its attack surface.
+M1042,D3-SCF,SystemCallFiltering,System Call Filtering,Controlling access to local computer system resources with kernel-level capabilities.
+M1042,D3-EDL,ExecutableDenylisting,Executable Denylisting,Blocking the execution of files on a host in accordance with defined application policy rules.
+M1043,D3-HBPI,Hardware-basedProcessIsolation,Hardware-based Process Isolation,Preventing one process from writing to the memory space of another process through hardware based address manager implementations.
+M1044,D3-SCF,SystemCallFiltering,System Call Filtering,Controlling access to local computer system resources with kernel-level capabilities.
+M1045,D3-EAL,ExecutableAllowlisting,Executable Allowlisting,Using a digital signature to authenticate a file before opening.
+M1045,D3-SBV,ServiceBinaryVerification,Service Binary Verification,Analyzing changes in service binary files by comparing to a source of truth.
+M1045,D3-DLIC,DriverLoadIntegrityChecking,Driver Load Integrity Checking,Ensuring the integrity of drivers loaded during initialization of the operating system.
+M1046,D3-BA,BootloaderAuthentication,Bootloader Authentication,Cryptographically authenticating the bootloader software before system boot.
+M1046,D3-TBI,TPMBootIntegrity,TPM Boot Integrity,Assuring the integrity of a platform by demonstrating that the boot process starts from a trusted combination of hardware and software and continues until the operating system has fully booted and applications are running.
+M1047,D3-LAM,LocalAccountMonitoring,Local Account Monitoring,Analyzing local user accounts to detect unauthorized activity.
+M1047,D3-DAM,DomainAccountMonitoring,Domain Account Monitoring,Monitoring the existence of or changes to Domain User Accounts.
+M1047,D3-SFA,SystemFileAnalysis,System File Analysis,"Monitoring system files such as authentication databases, configuration files, system logs, and system executables for modification or tampering."
+M1048,D3-DA,DynamicAnalysis,Dynamic Analysis,Executing or opening a file in a synthetic sandbox environment to determine if the file is a malicious program or if the file exploits another program such as a document reader.
+M1048,D3-SCF,SystemCallFiltering,System Call Filtering,Controlling access to local computer system resources with kernel-level capabilities.
+M1048,D3-HBPI,Hardware-basedProcessIsolation,Hardware-based Process Isolation,Preventing one process from writing to the memory space of another process through hardware based address manager implementations.
+M1049,D3-PA,ProcessAnalysis,Process Analysis,Process Analysis consists of observing a running application process and analyzing it to watch for certain behaviors or conditions which may indicate adversary activity.
+M1049,D3-FH,FileHashing,File Hashing,Employing file hash comparisons to detect known malware.
+M1049,D3-FCR,FileContentRules,File Content Rules,Employing a pattern matching rule language to analyze the content of files.
+M1050,D3-ITF,InboundTrafficFiltering,Inbound Traffic Filtering,Restricting network traffic originating from untrusted networks destined towards a private host or enclave.
+M1050,D3-EHPV,ExceptionHandlerPointerValidation,Exception Handler Pointer Validation,Validates that a referenced exception handler pointer is a valid exception handler.
+M1050,D3-SSC,ShadowStackComparisons,Shadow Stack Comparisons,Comparing a call stack in system memory with a shadow call stack maintained by the processor to determine unauthorized shellcode activity.
+M1050,D3-AH,ApplicationHardening,Application Hardening,Application Hardening makes an executable application more resilient to a class of exploits which either introduce new code or execute unwanted existing code.
+M1051,D3-SU,SoftwareUpdate,Software Update,Replacing old software on a computer system component.
+M1052,D3-SCF,SystemCallFiltering,System Call Filtering,Controlling access to local computer system resources with kernel-level capabilities.
+M1054,D3-CP,CertificatePinning,Certificate Pinning,Persisting either a server's X.509 certificate or their public key and comparing that to server's presented identity to allow for greater client confidence in the remote server's identity for SSL connections.
+M1054,D3-ACH,ApplicationConfigurationHardening,Application Configuration Hardening,Modifying an application's configuration to reduce its attack surface.
+M1056,D3-DE,DecoyEnvironment,Decoy Environment,A Decoy Environment comprises hosts and networks for the purposes of deceiving an attacker.
+M1056,D3-DO,DecoyObject,Decoy Object,A Decoy Object is created and deployed for the purposes of deceiving attackers.

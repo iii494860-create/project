@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b",
+  "base_url": "http://127.0.0.1:11434/v1",
+  "policy_path": "prompts/qwen_policy.md",
+  "max_tokens": 8192,
+  "deep_review": {
+    "enabled": true,
+    "timeout_seconds": 90,
+    "max_tokens": 2048
+  }
+}
