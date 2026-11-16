@@ -42,9 +42,6 @@ def update_env(values):
 def main():
     if not ENV_FILE.exists():
         raise SystemExit("먼저 install.sh를 실행하세요.")
-    if CLOUD_FILE.exists():
-        raise SystemExit("clouds.yaml이 이미 있어 덮어쓰지 않았습니다. 기존 파일을 직접 수정하세요.")
-
     bind_address = input(
         "대시보드 PC의 접속 IP [127.0.0.1; 다른 PC에서 접속하려면 이 PC의 LAN IP]: "
     ).strip() or "127.0.0.1"
@@ -62,6 +59,25 @@ def main():
     if key:
         KEY_FILE.write_text(key + "\n", encoding="utf-8")
         KEY_FILE.chmod(0o600)
+
+    print("\n온톨로지 벡터 임베딩 설정 (Ollama 호환 /api/embed, 4096차원 모델 필요)")
+    embed_url = input("임베딩 서버 기본 주소 [http://127.0.0.1:11434]: ").strip() or "http://127.0.0.1:11434"
+    parsed_embed = urlparse(embed_url)
+    if parsed_embed.scheme not in ("http", "https") or not parsed_embed.netloc or parsed_embed.path.rstrip("/").endswith("/api/embed"):
+        raise SystemExit("임베딩 주소는 http(s)://호스트[:포트] 형식으로 입력하세요 (/api/embed 제외).")
+    embed_model = input("임베딩 모델 [qwen3-embedding:8b]: ").strip() or "qwen3-embedding:8b"
+
+    print("\nRabbitMQ 설정 (OpenStack 알림 큐에서 로그를 읽을 때만 입력, 미사용이면 Enter)")
+    rabbit_host = input("RabbitMQ 호스트/IP: ").strip()
+    rabbit_user = ""
+    rabbit_password = ""
+    rabbit_vhost = "/"
+    rabbit_queue = "cto.openstack.notifications"
+    if rabbit_host:
+        rabbit_user = input("RabbitMQ 사용자명: ").strip()
+        rabbit_password = getpass.getpass("RabbitMQ 비밀번호: ")
+        rabbit_vhost = input("RabbitMQ vhost [/]: ").strip() or "/"
+        rabbit_queue = input("알림 queue [cto.openstack.notifications]: ").strip() or "cto.openstack.notifications"
 
     clouds = {}
     profiles = {}
@@ -103,6 +119,14 @@ def main():
         "DASHBOARD_BIND_ADDRESS": bind_address,
         "QWEN_API_BASE_URL": base_url.rstrip("/"),
         "QWEN_API_MODEL": model,
+        "CTO_EMBED_URL": embed_url.rstrip("/"),
+        "CTO_EMBED_MODEL": embed_model,
+        "RABBIT_HOST": rabbit_host,
+        "RABBIT_PORT": "5672",
+        "RABBIT_USER": rabbit_user,
+        "RABBIT_PASSWORD": rabbit_password,
+        "RABBIT_VHOST": rabbit_vhost,
+        "RABBIT_QUEUE": rabbit_queue,
     }
     if clouds:
         chosen = input("기본 OpenStack 프로필 " + str(list(clouds)) + ": ").strip()
@@ -116,6 +140,7 @@ def main():
         selected = profiles[chosen]
         values.update({
             "OPENSTACK_CLOUD": chosen,
+            "OPENSTACK_AUTH_URL": clouds[chosen]["auth"]["auth_url"],
             "OPENSTACK_USERNAME": selected["username"],
             "CTO_OPENSTACK_PROJECT_NAME": selected["project"],
             "CTO_OPENSTACK_PROJECT_ID": selected["project_id"],

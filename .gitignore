@@ -19,6 +19,8 @@ embeddings_cache.jsonl
 real_logs/
 agent_test/
 evaluation_results/
+migration_bundle.tar.gz
+migration_bundle/
 normalization_preview/
 docs/
 out/

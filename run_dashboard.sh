@@ -13,6 +13,7 @@ cd "$ROOT"
 set -a
 . "$ROOT/.env"
 set +a
+"$ROOT/.venv/bin/python" "$ROOT/sync_openstack_config.py"
 if [ -f "$ROOT/.qwen_api_key" ]; then
   export QWEN_API_KEY="$(cat "$ROOT/.qwen_api_key")"
 fi

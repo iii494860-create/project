@@ -798,6 +798,10 @@ def rabbitmq_queue_status() -> dict[str, Any]:
 
     cfg = _read_env_file(Path.home() / ".config" / "cto" / "rabbit.env")
     host = os.environ.get("RABBIT_HOST") or cfg.get("RABBIT_HOST") or "127.0.0.1"
+    try:
+        port = int(os.environ.get("RABBIT_PORT") or cfg.get("RABBIT_PORT") or "5672")
+    except ValueError:
+        port = 5672
     user = os.environ.get("RABBIT_USER") or cfg.get("RABBIT_USER") or ""
     password = os.environ.get("RABBIT_PASSWORD") or cfg.get("RABBIT_PASSWORD") or ""
     vhost = os.environ.get("RABBIT_VHOST") or cfg.get("RABBIT_VHOST") or "/"
@@ -808,7 +812,7 @@ def rabbitmq_queue_status() -> dict[str, Any]:
         conn = pika.BlockingConnection(
             pika.ConnectionParameters(
                 host=host,
-                port=5672,
+                port=port,
                 virtual_host=vhost,
                 credentials=pika.PlainCredentials(user, password),
                 socket_timeout=3,
