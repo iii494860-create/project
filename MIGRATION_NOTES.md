@@ -9,10 +9,11 @@
 
 ## 새 PC 설치 순서
 
-1. Ubuntu 22.04 이상에서 GitHub 저장소를 clone합니다. Git clone을 위한 Git과 GitHub 접근 권한이 필요합니다.
-2. 이식 묶음을 clone한 프로젝트 폴더에 `migration_bundle.tar.gz`라는 이름으로 복사합니다.
-3. 프로젝트 폴더에서 `./setup.sh`를 실행합니다. Ubuntu 패키지 설치, Python 환경 구성, Docker/Compose 설치, Neo4j 시작과 데이터 복원을 진행합니다. 시스템 패키지 설치에는 `sudo` 권한이 필요합니다.
-4. 설정 질문에 새 PC의 대시보드 접속 IP, Qwen API 주소, 임베딩 API 주소, OpenStack Keystone 주소 및 계정 정보를 입력합니다. OpenStack 주소만으로는 인증할 수 없으므로 사용자명·비밀번호 또는 application credential·프로젝트 정보도 필요합니다. RabbitMQ를 쓸 때는 브로커 주소와 계정도 입력합니다.
+1. Ubuntu 22.04 이상에서 `sudo apt update && sudo apt install -y git gh`를 실행하고 `gh auth login`으로 로그인합니다. 비공개 저장소 clone과 Release 다운로드 권한이 필요합니다.
+2. `gh repo clone iii494860-create/project`로 저장소를 clone하고 프로젝트 폴더에서 `./setup.sh`를 실행합니다. Ubuntu 패키지 설치, Python 환경 구성, Docker/Compose 설치, 비공개 Release에서 데이터 묶음 다운로드, SHA-256 확인, Neo4j 복원을 진행합니다. 시스템 패키지 설치에는 `sudo` 권한이 필요합니다.
+3. 설정 질문에 새 PC의 대시보드 접속 IP, Qwen API 주소, 임베딩 API 주소, OpenStack Keystone 주소 및 계정 정보를 입력합니다. OpenStack 주소만으로는 인증할 수 없으므로 사용자명·비밀번호 또는 application credential·프로젝트 정보도 필요합니다. RabbitMQ를 쓸 때는 브로커 주소와 계정도 입력합니다.
+
+데이터 묶음을 수동으로 옮겼다면 clone한 프로젝트 폴더에 `migration_bundle.tar.gz`라는 이름으로 두면 Release에서 다시 받지 않습니다.
 
 이식 묶음이 있으면 온톨로지와 임베딩을 다시 만들지 않고 DB를 복원합니다. 묶음 없이 설치하면 외부 문서를 내려받아 새로 생성합니다.
 

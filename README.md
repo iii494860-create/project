@@ -11,7 +11,16 @@
 
 Ubuntu 22.04 이상, 저장소를 clone할 Git, GitHub 접근 권한, `sudo` 권한이 필요합니다. `setup.sh`가 Python/venv와 Docker Engine/Compose가 없으면 Ubuntu 패키지로 설치하고 Docker 서비스를 시작합니다. 설치 PC에서 Qwen API와 Ollama 호환 임베딩 API에 접속할 수 있어야 하며, 임베딩 서버에는 `CTO_EMBED_MODEL` 모델이 준비되어 있어야 합니다. Docker의 공식 Ubuntu 설치 안내도 [참고](https://docs.docker.com/engine/install/ubuntu/)하세요.
 
-저장소를 clone한 뒤 저장소 폴더에서 다음 한 명령을 실행합니다.
+새 Ubuntu PC에서는 비공개 저장소와 Release에 접근할 수 있도록 처음 한 번 Git과 GitHub CLI를 설치하고 로그인합니다.
+
+    sudo apt update
+    sudo apt install -y git gh
+    gh auth login
+    gh repo clone iii494860-create/project
+    cd project
+    ./setup.sh
+
+`setup.sh`는 나머지 시스템 패키지를 설치하고 설정을 진행합니다.
 
     ./setup.sh
 
@@ -27,13 +36,13 @@ Ubuntu 22.04 이상, 저장소를 clone할 Git, GitHub 접근 권한, `sudo` 권
 
 복사·복원 전 주의 사항은 [MIGRATION_NOTES.md](MIGRATION_NOTES.md)를 먼저 확인하세요.
 
-새 PC에서 재생성하지 않고 현재 Neo4j와 같은 데이터를 쓰려면, 먼저 기존 PC에서 이식 묶음을 만듭니다.
+새 PC에서 재생성하지 않고 현재 Neo4j와 같은 데이터를 쓰려면, 기존 PC에서 만든 이식 묶음을 비공개 GitHub Release에서 자동으로 내려받습니다. 새 PC에서 저장소 clone 전에 `gh auth login`으로 저장소 접근 권한을 설정해야 합니다.
 
     ./export_migration_bundle.sh /path/to/current-project
 
-이 명령은 Neo4j의 일관된 백업을 위해 실행 중인 Neo4j 서비스를 잠시 중지했다가 다시 시작합니다. 만들어진 `migration_bundle.tar.gz`에는 Neo4j 데이터베이스, 생성 온톨로지, 문서와 임베딩 캐시가 들어갑니다. 이 파일은 민감한 데이터가 포함될 수 있어 Git에 올리지 않습니다. 새 PC에서 저장소를 clone한 다음 이 파일을 저장소 폴더로 안전하게 복사하고 `./setup.sh`를 실행하세요. 설치기가 이 파일을 발견하면 데이터를 복원하고, 입력한 새 주소와 인증정보로 대시보드를 시작합니다.
+이 명령은 Neo4j의 일관된 백업을 위해 실행 중인 Neo4j 서비스를 잠시 중지했다가 다시 시작합니다. 만들어진 `migration_bundle.tar.gz`에는 Neo4j 데이터베이스, 생성 온톨로지, 문서와 임베딩 캐시가 들어갑니다. 이 파일은 민감한 데이터가 포함될 수 있어 Git 이력에는 넣지 않고 비공개 GitHub Release 첨부파일로 배포합니다. `./setup.sh`가 Release에서 파일을 내려받고 SHA-256을 검증한 다음 복원합니다. 수동 복사한 파일이 프로젝트 폴더에 이미 있으면 그 파일을 사용합니다.
 
-이식 묶음 없이 `./setup.sh`를 실행하면 문서와 온톨로지를 다시 내려받아 새로 구성합니다. 즉, 두 설치 방식은 이식 묶음이 있느냐로 결정됩니다.
+기존 자료를 재생성하려는 경우에만 `MIGRATION_MODE=rebuild ./setup.sh`로 실행합니다. 기본 설치는 백업 복원을 사용합니다.
 
 스크립트는 Python 패키지와 로컬 설정을 준비하고 Neo4j를 시작한 뒤, 이식 묶음이 있으면 기존 데이터를 복원합니다. 묶음이 없으면 문서를 내려받아 온톨로지를 만들고 적재한 다음 임베딩을 생성합니다. 마지막으로 대시보드를 시작하며 종료하려면 `Ctrl+C`를 누릅니다. 나중에 다시 실행할 때는:
 
