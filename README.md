@@ -25,6 +25,8 @@ Ubuntu 22.04 이상, 저장소를 clone할 Git, GitHub 접근 권한, `sudo` 권
 
 ## 현재 PC 데이터를 그대로 이식
 
+복사·복원 전 주의 사항은 [MIGRATION_NOTES.md](MIGRATION_NOTES.md)를 먼저 확인하세요.
+
 새 PC에서 재생성하지 않고 현재 Neo4j와 같은 데이터를 쓰려면, 먼저 기존 PC에서 이식 묶음을 만듭니다.
 
     ./export_migration_bundle.sh /home/agent/ontology-project
