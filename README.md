@@ -29,7 +29,7 @@ Ubuntu 22.04 이상, 저장소를 clone할 Git, GitHub 접근 권한, `sudo` 권
 
 새 PC에서 재생성하지 않고 현재 Neo4j와 같은 데이터를 쓰려면, 먼저 기존 PC에서 이식 묶음을 만듭니다.
 
-    ./export_migration_bundle.sh /home/agent/ontology-project
+    ./export_migration_bundle.sh /path/to/current-project
 
 이 명령은 Neo4j의 일관된 백업을 위해 실행 중인 Neo4j 서비스를 잠시 중지했다가 다시 시작합니다. 만들어진 `migration_bundle.tar.gz`에는 Neo4j 데이터베이스, 생성 온톨로지, 문서와 임베딩 캐시가 들어갑니다. 이 파일은 민감한 데이터가 포함될 수 있어 Git에 올리지 않습니다. 새 PC에서 저장소를 clone한 다음 이 파일을 저장소 폴더로 안전하게 복사하고 `./setup.sh`를 실행하세요. 설치기가 이 파일을 발견하면 데이터를 복원하고, 입력한 새 주소와 인증정보로 대시보드를 시작합니다.
 
