@@ -13,9 +13,11 @@
 
     ./install.sh
 
-Python 패키지는 저장소 안의 .venv/에 설치됩니다. .env가 만들어지고 Neo4j 비밀번호가 로컬에서 생성됩니다. 설치 후 질문에 답해 Qwen API 설정과 OpenStack 세 프로필을 입력할 수 있습니다. 비밀번호와 API key는 Git에서 제외된 로컬 파일에만 저장됩니다.
+Python 패키지는 저장소 안의 .venv/에 설치됩니다. .env가 만들어지고 Neo4j 비밀번호가 로컬에서 생성됩니다. 설치 질문에서 대시보드를 실행할 PC의 IPv4 주소, Qwen API 주소, OpenStack 세 프로필의 Keystone 주소와 인증정보를 입력합니다. 인증정보는 Git에서 제외된 로컬 파일에만 저장됩니다.
 
-나중에 다시 설정할 때는 .venv/bin/python configure.py를 실행합니다. 기존 clouds.yaml은 덮어쓰지 않으므로, 이미 있는 설정은 직접 수정해야 합니다.
+다른 PC에서 대시보드에 접속하려면 실행 PC의 LAN IPv4를 입력하고 방화벽에서 TCP 8501을 허용해야 합니다. 이 절차는 대시보드 PC에만 적용됩니다. OpenStack 서비스의 알림 발행이나 방화벽 설정을 원격으로 변경하지 않습니다.
+
+설치 후 대시보드 PC 주소는 .env의 DASHBOARD_BIND_ADDRESS를 수정합니다. OpenStack 주소나 인증정보를 바꾸려면 clouds.yaml을 직접 수정합니다. 두 파일은 Git에서 제외됩니다.
 
 ### 2. Neo4j 시작
 
@@ -34,7 +36,7 @@ Neo4j는 Docker 컨테이너와 전용 Docker volume에 저장되며 localhost�
 ### 4. 외부 API와 OpenStack 설정
 
 - 설치 단계의 질문에 QWEN_API_BASE_URL, QWEN_API_MODEL, API key를 입력합니다. API key는 .qwen_api_key에 저장되고 권한이 제한됩니다. Qwen API 주소는 새 PC에서 네트워크로 접근 가능해야 합니다.
-- clouds.yaml.example을 참고해 ~/.config/openstack/clouds.yaml을 작성하고 파일 권한을 600으로 제한합니다. .env의 OPENSTACK_CLOUD에 사용할 cloud 이름(openstack-one/two/three)을 넣습니다. 암호와 application credential은 Git에 올리지 않습니다.
+- 설치 단계에서 입력한 세 Keystone 주소와 인증정보는 저장소 안의 ignored clouds.yaml에 저장되며 파일 권한은 600입니다. .env의 OPENSTACK_CLOUD는 사용할 프로필 이름을 선택합니다. 암호와 application credential은 Git에 올리지 않습니다.
 - 현재 코드는 프로세스마다 OpenStack cloud 프로필 하나를 사용합니다. 세 클러스터를 동시에 고르는 UI는 별도 구현이 필요하므로, 우선 한 프로필씩 설정해 사용합니다.
 - .env에 CTO_OPENSTACK_PROJECT_ID와 CTO_OPENSTACK_PROJECT_NAME을 실제 환경 값으로 설정합니다. 사용자 역할 조회에 필요한 OPENSTACK_USERNAME도 설정하세요.
 

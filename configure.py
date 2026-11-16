@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Collect local Qwen/OpenStack settings without committing credentials."""
 import getpass
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -43,6 +44,14 @@ def main():
         raise SystemExit("먼저 install.sh를 실행하세요.")
     if CLOUD_FILE.exists():
         raise SystemExit("clouds.yaml이 이미 있어 덮어쓰지 않았습니다. 기존 파일을 직접 수정하세요.")
+
+    bind_address = input(
+        "대시보드 PC의 접속 IP [127.0.0.1; 다른 PC에서 접속하려면 이 PC의 LAN IP]: "
+    ).strip() or "127.0.0.1"
+    try:
+        ipaddress.IPv4Address(bind_address)
+    except ipaddress.AddressValueError:
+        raise SystemExit("대시보드 접속 주소는 IPv4 주소로 입력하세요.")
 
     example = json.loads((ROOT / "qwen_api_config.example.json").read_text(encoding="utf-8"))
     base_url = input("Qwen API 주소 [" + example["base_url"] + "]: ").strip() or example["base_url"]
@@ -90,7 +99,11 @@ def main():
             "project_id": project_id,
         }
 
-    values = {"QWEN_API_BASE_URL": base_url.rstrip("/"), "QWEN_API_MODEL": model}
+    values = {
+        "DASHBOARD_BIND_ADDRESS": bind_address,
+        "QWEN_API_BASE_URL": base_url.rstrip("/"),
+        "QWEN_API_MODEL": model,
+    }
     if clouds:
         chosen = input("기본 OpenStack 프로필 " + str(list(clouds)) + ": ").strip()
         if chosen not in clouds:
@@ -109,6 +122,9 @@ def main():
         })
     update_env(values)
     print("\n설정을 저장했습니다. 암호와 API key는 권한 제한된 로컬 파일에만 저장했습니다.")
+    print(f"대시보드 접속 주소: http://{bind_address}:8501")
+    if bind_address != "127.0.0.1":
+        print("다른 PC에서 접속하려면 방화벽에서 TCP 8501도 허용되어야 합니다.")
 
 
 if __name__ == "__main__":

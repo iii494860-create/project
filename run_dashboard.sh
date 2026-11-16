@@ -18,4 +18,5 @@ if [ -f "$ROOT/.qwen_api_key" ]; then
 fi
 export OS_CLIENT_CONFIG_FILE="$ROOT/clouds.yaml"
 export CTO_PROJECT_ROOT="$ROOT"
-exec "$ROOT/.venv/bin/streamlit" run "$ROOT/dashboard_app.py" --server.address 127.0.0.1
+BIND_ADDRESS="${DASHBOARD_BIND_ADDRESS:-127.0.0.1}"
+exec "$ROOT/.venv/bin/streamlit" run "$ROOT/dashboard_app.py" --server.address "$BIND_ADDRESS"
