@@ -53,6 +53,7 @@ def safe(name):
 class Plan:
     def __init__(self, onto_path, schema_path):
         self.onto_path = onto_path
+        self.attack_version = None
         self.s = Store.load(onto_path)
         self.sch = Store.load(schema_path)
         self.errors, self.notes = [], []
@@ -378,7 +379,7 @@ def main():
     ap.add_argument("--ontology", default="out/ontology_all.ttl")
     ap.add_argument("--schema", default="schema.ttl")
     ap.add_argument("--build-report", default="out/build_report.txt")
-    ap.add_argument("--database", default="neo4j")
+    ap.add_argument("--database", default=os.environ.get("NEO4J_DATABASE", "neo4j"))
     ap.add_argument("--dry-run", action="store_true", help="DB 없이 변환과 사전 검사만")
     ap.add_argument("--verify-only", action="store_true", help="적재 없이 검증만")
     ap.add_argument("--test-rollback", action="store_true", help="일부러 실패시켜 이전 상태가 유지되는지 확인 (첫 적재 후)")

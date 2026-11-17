@@ -264,7 +264,7 @@ def main():
     ap.add_argument("--restore", action="store_true", help="캐시만으로 복원 (Ollama 호출 없음)")
     ap.add_argument("--limit", type=int, default=0, help="시험용: 앞 N개만")
     ap.add_argument("--kinds", default=",".join(KINDS))
-    ap.add_argument("--database", default="neo4j")
+    ap.add_argument("--database", default=os.environ.get("NEO4J_DATABASE", "neo4j"))
     a = ap.parse_args()
     kinds = [k for k in a.kinds.split(",") if k in KINDS]
 

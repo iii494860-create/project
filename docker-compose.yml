@@ -1,7 +1,6 @@
 services:
   neo4j:
     image: neo4j:2026.09-community
-    container_name: project-neo4j
     restart: unless-stopped
     mem_limit: 2g
     ports:
@@ -15,5 +14,15 @@ services:
     volumes:
       - neo4j_data:/data
 
+  embeddings:
+    image: ollama/ollama:0.13.5
+    profiles: [embedding]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11435:11434"
+    volumes:
+      - embedding_models:/root/.ollama
+
 volumes:
   neo4j_data:
+  embedding_models:

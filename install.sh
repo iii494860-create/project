@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
@@ -33,22 +34,14 @@ if [ ! -f "$ROOT/.env" ]; then
         echo "Neo4j 기본 최소 길이는 8자입니다. 다시 입력하세요." >&2
         continue
       fi
-      # .env is sourced by Bash as well as read by Docker Compose. Keep
-      # custom values safe for both parsers; generated values use URL-safe chars.
-      case "$PASSWORD" in
-        *'$'*|*'`'*|*'\'*)
-          echo '비밀번호에 $, 백틱, 백슬래시는 사용할 수 없습니다. 다시 입력하세요.' >&2
-          continue
-          ;;
-      esac
       break
     done
   fi
   if [ -z "$PASSWORD" ]; then
     PASSWORD="$("$PYTHON_BIN" -c 'import secrets; print(secrets.token_urlsafe(32))')"
   fi
-  NEO4J_PASSWORD_VALUE="$PASSWORD" "$PYTHON_BIN" - "$ROOT/.env" <<'PY'
-import json
+  NEO4J_PASSWORD_VALUE="$PASSWORD" "$ROOT/.venv/bin/python" - "$ROOT/.env" <<'PY'
+from configure import quote_env
 import os
 import sys
 from pathlib import Path
@@ -58,7 +51,7 @@ password = os.environ["NEO4J_PASSWORD_VALUE"]
 lines = path.read_text(encoding="utf-8").splitlines()
 for i, line in enumerate(lines):
     if line.startswith("NEO4J_PASSWORD="):
-        lines[i] = "NEO4J_PASSWORD=" + json.dumps(password, ensure_ascii=False)
+        lines[i] = "NEO4J_PASSWORD=" + quote_env(password)
         break
 path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 PY

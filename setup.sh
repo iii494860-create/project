@@ -30,7 +30,7 @@ ensure_base_tools() {
   "${SUDO[@]}" apt-get install -y software-properties-common
   "${SUDO[@]}" add-apt-repository -y universe
   "${SUDO[@]}" apt-get update
-  "${SUDO[@]}" apt-get install -y ca-certificates curl python3 python3-venv python3-pip
+  "${SUDO[@]}" apt-get install -y ca-certificates curl python3 python3-venv python3-pip fonts-nanum
 }
 
 ensure_docker() {
@@ -65,9 +65,7 @@ echo "=== 2/4 Neo4j 시작 ==="
 bash "$ROOT/start_services.sh"
 
 echo "Neo4j 준비를 기다립니다 (최대 180초)..."
-set -a
-. "$ROOT/.env"
-set +a
+. "$ROOT/env.sh"
 "$ROOT/.venv/bin/python" - <<'PY'
 import os, sys, time, subprocess
 from neo4j import GraphDatabase
@@ -89,14 +87,15 @@ finally:
     driver.close()
 PY
 
-if [ -f "$ROOT/migration_bundle.tar.gz" ]; then
-  echo "=== 3/4 기존 Neo4j·로그·임베딩 백업 복원 ==="
-  bash "$ROOT/restore_migration_bundle.sh"
-else
-  echo "=== 3/4 새 온톨로지 생성·적재 및 벡터 임베딩 ==="
-  bash "$ROOT/setup_knowledge.sh"
-fi
+echo "=== 3/4 Qwen·임베딩 연결 및 전체 지식 초기화 ==="
+"$ROOT/.venv/bin/python" "$ROOT/sync_openstack_config.py"
+"$ROOT/.venv/bin/python" "$ROOT/check_connections.py"
+bash "$ROOT/setup_embedding.sh"
+bash "$ROOT/setup_knowledge.sh"
 
-echo "=== 4/4 설치 완료 ==="
+echo "=== 4/4 로그 수신·탐지·저장 서비스 설치 ==="
+"$ROOT/.venv/bin/python" "$ROOT/install_runtime_services.py"
+
+echo "=== 설치 및 지식 검증 완료 ==="
 echo "대시보드를 시작합니다. 종료하려면 Ctrl+C를 누르세요."
 exec "$ROOT/run_dashboard.sh"

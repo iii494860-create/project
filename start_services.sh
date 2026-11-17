@@ -15,5 +15,5 @@ else
   exit 1
 fi
 "${DOCKER[@]}" compose version >/dev/null
-"${DOCKER[@]}" compose up -d neo4j
+bash "$ROOT/compose.sh" up -d neo4j
 echo "Neo4j 시작 요청 완료. http://127.0.0.1:7474 / bolt://127.0.0.1:7687"

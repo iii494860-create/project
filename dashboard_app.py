@@ -795,6 +795,8 @@ def _read_env_file(path: Path) -> dict[str, str]:
 def rabbitmq_queue_status() -> dict[str, Any]:
     if pika is None:
         return {"ok": False, "status": "PIKA 없음", "consumers": None, "messages": None}
+    if not os.environ.get('RABBIT_HOST'):
+        return {"ok": False, "status": "미설정", "consumers": None, "messages": None}
 
     cfg = _read_env_file(Path.home() / ".config" / "cto" / "rabbit.env")
     host = os.environ.get("RABBIT_HOST") or cfg.get("RABBIT_HOST") or "127.0.0.1"
@@ -809,12 +811,16 @@ def rabbitmq_queue_status() -> dict[str, Any]:
 
     conn = None
     try:
+        import ssl
+        rabbit_tls = (pika.SSLOptions(ssl.create_default_context(cafile=os.environ.get('RABBIT_CA_FILE') or None), host)
+                      if os.environ.get('RABBIT_TLS', 'false').lower() == 'true' else None)
         conn = pika.BlockingConnection(
             pika.ConnectionParameters(
                 host=host,
                 port=port,
                 virtual_host=vhost,
                 credentials=pika.PlainCredentials(user, password),
+                ssl_options=rabbit_tls,
                 socket_timeout=3,
                 blocked_connection_timeout=3,
                 heartbeat=30,

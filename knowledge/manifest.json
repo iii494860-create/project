@@ -1,0 +1,48 @@
+{
+  "format": 1,
+  "release_date": "2026-11-17",
+  "counts": {
+    "Knowledge": 971,
+    "OntologyClass": 36,
+    "KISAAdvisory": 2814,
+    "KISACVE": 17078,
+    "MENTIONS_CVE": 17963,
+    "knowledge_relationships": 3714
+  },
+  "ontology_labels": {
+    "DefensiveTechnique": 57,
+    "Analytic": 129,
+    "DetectionStrategy": 116,
+    "OpenStackService": 4,
+    "Mitigation": 36,
+    "Vulnerability": 180,
+    "Technique": 114,
+    "Tactic": 15,
+    "ActionType": 12,
+    "AllowlistEntry": 7,
+    "BehaviorClass": 36,
+    "LogChannel": 5,
+    "LogEventType": 80,
+    "LogField": 81,
+    "DetectionRule": 18,
+    "AlertTier": 6,
+    "SourceDocument": 17,
+    "InvestigationQuery": 12,
+    "CommandParameter": 13,
+    "ResourceType": 23,
+    "ResponseAction": 10
+  },
+  "files": {
+    "build_report.txt": "f6618bf600b41e0cff4971ca9aaaf25ecfb3aedb71f1933220ffa07a594f8804",
+    "extra_labels.json": "c727939573455d3e4d1df15c95e5f25af212bd862717473365a16abf77fc6efe",
+    "kisa_public.json.gz": "c8c4d3a91bef679f1c9b4e14dea83abafc837c69f19f69cd1f0d0b09de5e3a4e",
+    "ontology_all.ttl": "4ed7b6b4bb56f13d5ce1bf6d3934bc03a5ebfcb82fd7e6a1b1be5f72c04f4b9f",
+    "public_docs.tar.gz": "673a4c125af8e38af8e78a9619b5223c38c302d10fc2f0710420ac257591dc3a"
+  },
+  "sources": [
+    "https://attack.mitre.org/",
+    "https://d3fend.mitre.org/",
+    "https://docs.openstack.org/",
+    "https://www.boho.or.kr/kr/"
+  ]
+}

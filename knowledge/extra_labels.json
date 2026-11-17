@@ -1,0 +1,98 @@
+{
+  "kb:cinder_bc_snapshot_create": [
+    "CinderExtension"
+  ],
+  "kb:cinder_bc_snapshot_delete": [
+    "CinderExtension"
+  ],
+  "kb:cinder_bc_volume_create": [
+    "CinderExtension"
+  ],
+  "kb:cinder_bc_volume_delete": [
+    "CinderExtension"
+  ],
+  "kb:cinder_evt_snapshot_create_end": [
+    "CinderExtension"
+  ],
+  "kb:cinder_evt_snapshot_create_start": [
+    "CinderExtension"
+  ],
+  "kb:cinder_evt_snapshot_delete_end": [
+    "CinderExtension"
+  ],
+  "kb:cinder_evt_snapshot_delete_start": [
+    "CinderExtension"
+  ],
+  "kb:cinder_evt_volume_create_end": [
+    "CinderExtension"
+  ],
+  "kb:cinder_evt_volume_create_start": [
+    "CinderExtension"
+  ],
+  "kb:cinder_evt_volume_delete_end": [
+    "CinderExtension"
+  ],
+  "kb:cinder_evt_volume_delete_start": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_context_project_id": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_context_tenant_id": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_context_user_id": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_payload_id": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_payload_project_id": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_payload_snapshot_id": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_payload_snapshot_uuid": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_payload_source_snapshot_id": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_payload_source_volid": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_payload_status": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_payload_tenant_id": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_payload_user_id": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_payload_volume_id": [
+    "CinderExtension"
+  ],
+  "kb:cinder_field_payload_volume_type": [
+    "CinderExtension"
+  ],
+  "kb:cinder_rule_snapshot_burst": [
+    "CinderExtension"
+  ],
+  "kb:cinder_rule_volume_burst": [
+    "CinderExtension"
+  ],
+  "kb:cinder_strategy_snapshot_burst": [
+    "CinderExtension"
+  ],
+  "kb:cinder_strategy_volume_burst": [
+    "CinderExtension"
+  ],
+  "kb:cinder_tier_audit": [
+    "CinderExtension"
+  ],
+  "kb:cinder_tier_watch": [
+    "CinderExtension"
+  ]
+}

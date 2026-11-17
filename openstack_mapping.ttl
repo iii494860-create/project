@@ -2495,8 +2495,6 @@ kb:T1537 cto:recommendedResponse kb:resp_image_unshare , kb:resp_image_deactivat
 
 kb:T1525 cto:recommendedResponse kb:resp_image_deactivate .
 
-kb:T1098_001 cto:recommendedResponse kb:resp_keypair_delete .
-
 kb:T1110_001 cto:recommendedResponse kb:resp_disable_user .
 
 
@@ -2543,3 +2541,365 @@ kb:allow_trusted_project a cto:AllowlistEntry ;
     cto:entryValue "<신뢰 프로젝트 ID>" ;
     cto:verificationStatus "실로그확인필요" ;
     rdfs:comment "클러스터의 실제 서비스 계정·관리자 IP·admin 역할 ID 로 교체 (allowlist.json 으로도 지정 가능)"@ko .
+
+# CTO_APPLICATION_CREDENTIAL_V1
+
+kb:doc_appcredential a cto:SourceDocument ;
+    rdfs:label "Keystone Application Credentials"@ko ;
+    cto:url "https://docs.openstack.org/keystone/latest/user/application_credentials.html"^^xsd:anyURI ;
+    rdfs:comment "2026-11-17 cto-test 실제 생성·삭제 CADF 알림과 설치된 CLI 도움말 확인. 사용 인증 로그 연결은 미확인."@ko .
+
+kb:res_application_credential a cto:ResourceType ;
+    rdfs:label "Application Credential"@ko ;
+    cto:providedBy kb:Keystone ;
+    cto:apiResourceName "application_credential" ;
+    cto:typeURI "data/security/credential" ;
+    cto:sensitivity "high" ;
+    cto:derivedFrom kb:doc_appcredential ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:field_appcredential_user a cto:LogField ;
+    rdfs:label "자격증명 작업 수행자"@ko ;
+    cto:fieldPath "payload.initiator.user_id" , "payload.initiator.id" ;
+    cto:refersTo kb:res_user ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_appcredential ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:field_appcredential_project a cto:LogField ;
+    rdfs:label "자격증명 발급 프로젝트"@ko ;
+    cto:fieldPath "payload.initiator.project_id" , "_context_project_id" ;
+    cto:refersTo kb:res_project ;
+    cto:isCorrelationKey true ;
+    cto:derivedFrom kb:doc_appcredential ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:field_appcredential_id a cto:LogField ;
+    rdfs:label "Application Credential ID"@ko ;
+    cto:fieldPath "payload.resource_info" , "payload.target.id" ;
+    cto:refersTo kb:res_application_credential ;
+    cto:isCorrelationKey false ;
+    cto:derivedFrom kb:doc_appcredential ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:bc_appcredential_create a cto:BehaviorClass ;
+    rdfs:label "Application Credential 생성"@ko ;
+    cto:riskScore 0 ;
+    cto:matchesAction kb:act_create ;
+    cto:matchesResourceType kb:res_application_credential ;
+    cto:derivedFrom kb:doc_appcredential ;
+    cto:verificationStatus "팀설계" ;
+    rdfs:comment "성공·실패 생성/삭제 기록을 보존한다. 단독 발급은 공격 판정이 아니며 자격증명 사용 성공도 뜻하지 않는다."@ko ;
+    cto:suggestsTechnique kb:T1098_001 .
+
+kb:ev_appcredential_create a cto:LogEventType ;
+    rdfs:label "Keystone Application Credential 생성"@ko ;
+    cto:eventTypeName "identity.application_credential.created" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_create ;
+    cto:onResourceType kb:res_application_credential ;
+    cto:classifiedAs kb:bc_appcredential_create ;
+    cto:hasField kb:field_appcredential_user , kb:field_appcredential_project , kb:field_appcredential_id , kb:f_ks_src_ip , kb:f_ks_request_id , kb:f_ks_outcome , kb:f_ks_target_type , kb:f_ks_initiator_username , kb:f_ks_agent ;
+    cto:derivedFrom kb:doc_appcredential ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:bc_appcredential_delete a cto:BehaviorClass ;
+    rdfs:label "Application Credential 삭제"@ko ;
+    cto:riskScore 0 ;
+    cto:matchesAction kb:act_delete ;
+    cto:matchesResourceType kb:res_application_credential ;
+    cto:derivedFrom kb:doc_appcredential ;
+    cto:verificationStatus "팀설계" ;
+    rdfs:comment "성공·실패 생성/삭제 기록을 보존한다. 단독 발급은 공격 판정이 아니며 자격증명 사용 성공도 뜻하지 않는다."@ko .
+
+kb:ev_appcredential_delete a cto:LogEventType ;
+    rdfs:label "Keystone Application Credential 삭제"@ko ;
+    cto:eventTypeName "identity.application_credential.deleted" ;
+    cto:emittedBy kb:Keystone ;
+    cto:viaChannel kb:ch_keystone_cadf ;
+    cto:hasAction kb:act_delete ;
+    cto:onResourceType kb:res_application_credential ;
+    cto:classifiedAs kb:bc_appcredential_delete ;
+    cto:hasField kb:field_appcredential_user , kb:field_appcredential_project , kb:field_appcredential_id , kb:f_ks_src_ip , kb:f_ks_request_id , kb:f_ks_outcome , kb:f_ks_target_type , kb:f_ks_initiator_username , kb:f_ks_agent ;
+    cto:derivedFrom kb:doc_appcredential ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:param_application_credential a cto:CommandParameter ;
+    rdfs:label "확인된 Application Credential ID"@ko ;
+    cto:placeholder "<application-credential>" ;
+    cto:valueFrom kb:field_appcredential_id .
+
+kb:inv_appcredential_show a cto:InvestigationQuery ;
+    rdfs:label "Application Credential 속성 확인"@ko ;
+    cto:command "openstack application credential show <application-credential>" ;
+    cto:hasParameter kb:param_application_credential ;
+    cto:purpose "자격증명 소유자 계정의 적절한 인증 문맥에서 프로젝트·역할·만료 확인. ID만으로 소유 계정을 바꿀 수 없으며 404는 삭제 또는 접근 범위 차이일 수 있다."@ko ;
+    cto:derivedFrom kb:doc_appcredential ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:resp_appcredential_delete a cto:ResponseAction ;
+    rdfs:label "확인된 비승인 Application Credential 폐기"@ko ;
+    cto:command "openstack application credential delete <application-credential>" ;
+    cto:hasParameter kb:param_application_credential ;
+    cto:requiresApproval true ;
+    rdfs:comment "소유 계정·프로젝트·업무 영향 확인 후 승인된 사용자 인증 문맥에서 실행. 기존 secret 복원 불가. 삭제 이벤트에는 재삭제를 권고하지 않는다."@ko ;
+    cto:derivedFrom kb:doc_appcredential ;
+    cto:verificationStatus "공식문서확인" .
+
+kb:bc_appcredential_create cto:investigateWith kb:inv_appcredential_show .
+
+kb:bc_appcredential_delete cto:investigateWith kb:inv_appcredential_show .
+
+kb:rule_appcredential_after_takeover a cto:DetectionRule ;
+    rdfs:label "의심 로그인 후 Application Credential 발급"@ko ;
+    cto:ruleType "appcredential_sequence" ;
+    cto:alertTier kb:tier_chain ;
+    cto:usesEvent kb:ev_appcredential_create ;
+    cto:usesBehavior kb:bc_appcredential_create ;
+    cto:detects kb:T1098_001 ;
+    cto:severity "high" ;
+    cto:windowSeconds 3600 ;
+    cto:groupBy "@user" ;
+    cto:sequenceStep "1:rule_fail_then_success" , "2:bc_appcredential_create" ;
+    cto:condition "실패 반복 후 성공 경보에 포함된 성공 로그인과 동일 사용자·출발지 IP에서 3600초 이내 자격증명 생성 성공. 발급 프로젝트·자격증명 ID 필수, 알려진 프로젝트 불일치·승인 자격증명 제외. 단순 신규 IP는 제외. 발급 의심이며 자격증명 사용·침해 확정 아님."@ko ;
+    cto:ruleResponse kb:resp_appcredential_delete ;
+    cto:derivedFrom kb:doc_team_scenario ;
+    cto:verificationStatus "팀설계" .
+
+kb:rule_keypair_after_takeover cto:ruleResponse kb:resp_keypair_delete .
+
+# CTO_CINDER_ONTOLOGY_EXTENSION_V1
+# Ontology event/behavior definitions; no ATT&CK technique is inferred.
+kb:cinder_bc_volume_create a cto:BehaviorClass ;
+    rdfs:label "Cinder 볼륨 생성"@ko ;
+    cto:riskScore 0 .
+kb:cinder_bc_volume_delete a cto:BehaviorClass ;
+    rdfs:label "Cinder 볼륨 삭제"@ko ;
+    cto:riskScore 0 .
+kb:cinder_bc_snapshot_create a cto:BehaviorClass ;
+    rdfs:label "Cinder 스냅샷 생성"@ko ;
+    cto:riskScore 0 .
+kb:cinder_bc_snapshot_delete a cto:BehaviorClass ;
+    rdfs:label "Cinder 스냅샷 삭제"@ko ;
+    cto:riskScore 0 .
+kb:cinder_field_payload_project_id a cto:LogField ;
+    rdfs:label "payload.project_id" ;
+    cto:fieldPath "payload.project_id" .
+kb:cinder_field_payload_tenant_id a cto:LogField ;
+    rdfs:label "payload.tenant_id" ;
+    cto:fieldPath "payload.tenant_id" .
+kb:cinder_field_payload_user_id a cto:LogField ;
+    rdfs:label "payload.user_id" ;
+    cto:fieldPath "payload.user_id" .
+kb:cinder_field_context_project_id a cto:LogField ;
+    rdfs:label "_context_project_id" ;
+    cto:fieldPath "_context_project_id" .
+kb:cinder_field_context_tenant_id a cto:LogField ;
+    rdfs:label "_context_tenant_id" ;
+    cto:fieldPath "_context_tenant_id" .
+kb:cinder_field_context_user_id a cto:LogField ;
+    rdfs:label "_context_user_id" ;
+    cto:fieldPath "_context_user_id" .
+kb:cinder_field_payload_snapshot_id a cto:LogField ;
+    rdfs:label "payload.snapshot_id" ;
+    cto:fieldPath "payload.snapshot_id" .
+kb:cinder_field_payload_snapshot_uuid a cto:LogField ;
+    rdfs:label "payload.snapshot_uuid" ;
+    cto:fieldPath "payload.snapshot_uuid" .
+kb:cinder_field_payload_source_snapshot_id a cto:LogField ;
+    rdfs:label "payload.source_snapshot_id" ;
+    cto:fieldPath "payload.source_snapshot_id" .
+kb:cinder_field_payload_volume_id a cto:LogField ;
+    rdfs:label "payload.volume_id" ;
+    cto:fieldPath "payload.volume_id" .
+kb:cinder_field_payload_id a cto:LogField ;
+    rdfs:label "payload.id" ;
+    cto:fieldPath "payload.id" .
+kb:cinder_field_payload_source_volid a cto:LogField ;
+    rdfs:label "payload.source_volid" ;
+    cto:fieldPath "payload.source_volid" .
+kb:cinder_field_payload_status a cto:LogField ;
+    rdfs:label "payload.status" ;
+    cto:fieldPath "payload.status" .
+kb:cinder_field_payload_volume_type a cto:LogField ;
+    rdfs:label "payload.volume_type" ;
+    cto:fieldPath "payload.volume_type" .
+kb:cinder_evt_volume_create_start a cto:LogEventType ;
+    rdfs:label "Cinder volume.create.start" ;
+    cto:eventTypeName "volume.create.start" ;
+    cto:classifiedAs kb:cinder_bc_volume_create ;
+    cto:hasField kb:cinder_field_payload_project_id,
+        kb:cinder_field_payload_tenant_id,
+        kb:cinder_field_payload_user_id,
+        kb:cinder_field_context_project_id,
+        kb:cinder_field_context_tenant_id,
+        kb:cinder_field_context_user_id,
+        kb:cinder_field_payload_snapshot_id,
+        kb:cinder_field_payload_snapshot_uuid,
+        kb:cinder_field_payload_source_snapshot_id,
+        kb:cinder_field_payload_volume_id,
+        kb:cinder_field_payload_id,
+        kb:cinder_field_payload_source_volid,
+        kb:cinder_field_payload_status,
+        kb:cinder_field_payload_volume_type .
+kb:cinder_evt_volume_create_end a cto:LogEventType ;
+    rdfs:label "Cinder volume.create.end" ;
+    cto:eventTypeName "volume.create.end" ;
+    cto:classifiedAs kb:cinder_bc_volume_create ;
+    cto:hasField kb:cinder_field_payload_project_id,
+        kb:cinder_field_payload_tenant_id,
+        kb:cinder_field_payload_user_id,
+        kb:cinder_field_context_project_id,
+        kb:cinder_field_context_tenant_id,
+        kb:cinder_field_context_user_id,
+        kb:cinder_field_payload_snapshot_id,
+        kb:cinder_field_payload_snapshot_uuid,
+        kb:cinder_field_payload_source_snapshot_id,
+        kb:cinder_field_payload_volume_id,
+        kb:cinder_field_payload_id,
+        kb:cinder_field_payload_source_volid,
+        kb:cinder_field_payload_status,
+        kb:cinder_field_payload_volume_type .
+kb:cinder_evt_volume_delete_start a cto:LogEventType ;
+    rdfs:label "Cinder volume.delete.start" ;
+    cto:eventTypeName "volume.delete.start" ;
+    cto:classifiedAs kb:cinder_bc_volume_delete ;
+    cto:hasField kb:cinder_field_payload_project_id,
+        kb:cinder_field_payload_tenant_id,
+        kb:cinder_field_payload_user_id,
+        kb:cinder_field_context_project_id,
+        kb:cinder_field_context_tenant_id,
+        kb:cinder_field_context_user_id,
+        kb:cinder_field_payload_snapshot_id,
+        kb:cinder_field_payload_snapshot_uuid,
+        kb:cinder_field_payload_source_snapshot_id,
+        kb:cinder_field_payload_volume_id,
+        kb:cinder_field_payload_id,
+        kb:cinder_field_payload_source_volid,
+        kb:cinder_field_payload_status,
+        kb:cinder_field_payload_volume_type .
+kb:cinder_evt_volume_delete_end a cto:LogEventType ;
+    rdfs:label "Cinder volume.delete.end" ;
+    cto:eventTypeName "volume.delete.end" ;
+    cto:classifiedAs kb:cinder_bc_volume_delete ;
+    cto:hasField kb:cinder_field_payload_project_id,
+        kb:cinder_field_payload_tenant_id,
+        kb:cinder_field_payload_user_id,
+        kb:cinder_field_context_project_id,
+        kb:cinder_field_context_tenant_id,
+        kb:cinder_field_context_user_id,
+        kb:cinder_field_payload_snapshot_id,
+        kb:cinder_field_payload_snapshot_uuid,
+        kb:cinder_field_payload_source_snapshot_id,
+        kb:cinder_field_payload_volume_id,
+        kb:cinder_field_payload_id,
+        kb:cinder_field_payload_source_volid,
+        kb:cinder_field_payload_status,
+        kb:cinder_field_payload_volume_type .
+kb:cinder_evt_snapshot_create_start a cto:LogEventType ;
+    rdfs:label "Cinder snapshot.create.start" ;
+    cto:eventTypeName "snapshot.create.start" ;
+    cto:classifiedAs kb:cinder_bc_snapshot_create ;
+    cto:hasField kb:cinder_field_payload_project_id,
+        kb:cinder_field_payload_tenant_id,
+        kb:cinder_field_payload_user_id,
+        kb:cinder_field_context_project_id,
+        kb:cinder_field_context_tenant_id,
+        kb:cinder_field_context_user_id,
+        kb:cinder_field_payload_snapshot_id,
+        kb:cinder_field_payload_snapshot_uuid,
+        kb:cinder_field_payload_source_snapshot_id,
+        kb:cinder_field_payload_volume_id,
+        kb:cinder_field_payload_id,
+        kb:cinder_field_payload_source_volid,
+        kb:cinder_field_payload_status,
+        kb:cinder_field_payload_volume_type .
+kb:cinder_evt_snapshot_create_end a cto:LogEventType ;
+    rdfs:label "Cinder snapshot.create.end" ;
+    cto:eventTypeName "snapshot.create.end" ;
+    cto:classifiedAs kb:cinder_bc_snapshot_create ;
+    cto:hasField kb:cinder_field_payload_project_id,
+        kb:cinder_field_payload_tenant_id,
+        kb:cinder_field_payload_user_id,
+        kb:cinder_field_context_project_id,
+        kb:cinder_field_context_tenant_id,
+        kb:cinder_field_context_user_id,
+        kb:cinder_field_payload_snapshot_id,
+        kb:cinder_field_payload_snapshot_uuid,
+        kb:cinder_field_payload_source_snapshot_id,
+        kb:cinder_field_payload_volume_id,
+        kb:cinder_field_payload_id,
+        kb:cinder_field_payload_source_volid,
+        kb:cinder_field_payload_status,
+        kb:cinder_field_payload_volume_type .
+kb:cinder_evt_snapshot_delete_start a cto:LogEventType ;
+    rdfs:label "Cinder snapshot.delete.start" ;
+    cto:eventTypeName "snapshot.delete.start" ;
+    cto:classifiedAs kb:cinder_bc_snapshot_delete ;
+    cto:hasField kb:cinder_field_payload_project_id,
+        kb:cinder_field_payload_tenant_id,
+        kb:cinder_field_payload_user_id,
+        kb:cinder_field_context_project_id,
+        kb:cinder_field_context_tenant_id,
+        kb:cinder_field_context_user_id,
+        kb:cinder_field_payload_snapshot_id,
+        kb:cinder_field_payload_snapshot_uuid,
+        kb:cinder_field_payload_source_snapshot_id,
+        kb:cinder_field_payload_volume_id,
+        kb:cinder_field_payload_id,
+        kb:cinder_field_payload_source_volid,
+        kb:cinder_field_payload_status,
+        kb:cinder_field_payload_volume_type .
+kb:cinder_evt_snapshot_delete_end a cto:LogEventType ;
+    rdfs:label "Cinder snapshot.delete.end" ;
+    cto:eventTypeName "snapshot.delete.end" ;
+    cto:classifiedAs kb:cinder_bc_snapshot_delete ;
+    cto:hasField kb:cinder_field_payload_project_id,
+        kb:cinder_field_payload_tenant_id,
+        kb:cinder_field_payload_user_id,
+        kb:cinder_field_context_project_id,
+        kb:cinder_field_context_tenant_id,
+        kb:cinder_field_context_user_id,
+        kb:cinder_field_payload_snapshot_id,
+        kb:cinder_field_payload_snapshot_uuid,
+        kb:cinder_field_payload_source_snapshot_id,
+        kb:cinder_field_payload_volume_id,
+        kb:cinder_field_payload_id,
+        kb:cinder_field_payload_source_volid,
+        kb:cinder_field_payload_status,
+        kb:cinder_field_payload_volume_type .
+kb:cinder_tier_watch a cto:AlertTier ;
+    rdfs:label "주의"@ko .
+kb:cinder_tier_audit a cto:AlertTier ;
+    rdfs:label "정보성 감사"@ko .
+kb:cinder_strategy_snapshot_burst a cto:DetectionStrategy ;
+    rdfs:label "Cinder 스냅샷 단시간 다량 생성 감시"@ko .
+kb:cinder_strategy_volume_burst a cto:DetectionStrategy ;
+    rdfs:label "Cinder 볼륨 단시간 다량 생성 감시"@ko .
+kb:cinder_rule_snapshot_burst a cto:DetectionRule ;
+    rdfs:label "5분 내 스냅샷 3회 이상 생성"@ko ;
+    cto:ruleType "threshold" ;
+    cto:usesEvent kb:cinder_evt_snapshot_create_end ;
+    cto:groupBy "_context_project_id" ;
+    cto:windowSeconds 300 ;
+    cto:threshold 3 ;
+    cto:alertTier kb:cinder_tier_watch ;
+    cto:severity "medium" ;
+    cto:condition "5분 내 스냅샷 3회 이상 생성 (동일 _context_project_id)" .
+kb:cinder_strategy_snapshot_burst cto:implementedBy kb:cinder_rule_snapshot_burst .
+kb:cinder_rule_volume_burst a cto:DetectionRule ;
+    rdfs:label "5분 내 볼륨 5회 이상 생성"@ko ;
+    cto:ruleType "threshold" ;
+    cto:usesEvent kb:cinder_evt_volume_create_end ;
+    cto:groupBy "_context_project_id" ;
+    cto:windowSeconds 300 ;
+    cto:threshold 5 ;
+    cto:alertTier kb:cinder_tier_watch ;
+    cto:severity "medium" ;
+    cto:condition "5분 내 볼륨 5회 이상 생성 (동일 _context_project_id)" .
+kb:cinder_strategy_volume_burst cto:implementedBy kb:cinder_rule_volume_burst .
+
+
+cto:ruleResponse a owl:ObjectProperty ;
+    rdfs:label "탐지 규칙별 대응"@ko ; rdfs:domain cto:DetectionRule ; rdfs:range cto:ResponseAction .

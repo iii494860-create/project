@@ -4,10 +4,12 @@ import getpass
 import ipaddress
 import json
 import os
+import uuid
 from pathlib import Path
 from urllib.parse import urlparse
 
 import yaml
+from runtime_env import values as current_env
 
 ROOT = Path(__file__).resolve().parent
 ENV_FILE = ROOT / ".env"
@@ -18,7 +20,7 @@ KEY_FILE = ROOT / ".qwen_api_key"
 def quote_env(value):
     if "\n" in value or "\r" in value:
         raise ValueError("설정값에는 줄바꿈을 넣을 수 없습니다.")
-    return json.dumps(value)
+    return "'" + value.replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 
 def update_env(values):
@@ -40,6 +42,7 @@ def update_env(values):
 
 
 def main():
+    os.umask(0o077)
     if not ENV_FILE.exists():
         raise SystemExit("먼저 install.sh를 실행하세요.")
     bind_address = input(
@@ -60,24 +63,34 @@ def main():
         KEY_FILE.write_text(key + "\n", encoding="utf-8")
         KEY_FILE.chmod(0o600)
 
-    print("\n온톨로지 벡터 임베딩 설정 (Ollama 호환 /api/embed, 4096차원 모델 필요)")
-    embed_url = input("임베딩 서버 기본 주소 [http://127.0.0.1:11434]: ").strip() or "http://127.0.0.1:11434"
+    print("\n임베딩: 로컬 자동 설치 또는 기존 Ollama 서버 (4096차원)")
+    local_embed = input("임베딩 서버도 이 PC에 자동 설치할까요? [Y/n]: ").strip().lower() != 'n'
+    embed_url = "http://127.0.0.1:11435" if local_embed else (input("임베딩 서버 기본 주소: ").strip())
     parsed_embed = urlparse(embed_url)
     if parsed_embed.scheme not in ("http", "https") or not parsed_embed.netloc or parsed_embed.path.rstrip("/").endswith("/api/embed"):
         raise SystemExit("임베딩 주소는 http(s)://호스트[:포트] 형식으로 입력하세요 (/api/embed 제외).")
-    embed_model = input("임베딩 모델 [qwen3-embedding:8b]: ").strip() or "qwen3-embedding:8b"
+    embed_model = "qwen3-embedding:8b" if local_embed else (input("임베딩 모델 [qwen3-embedding:8b]: ").strip() or "qwen3-embedding:8b")
 
-    print("\nRabbitMQ 설정 (OpenStack 알림 큐에서 로그를 읽을 때만 입력, 미사용이면 Enter)")
+    print("\nRabbitMQ 설정 (새 알림을 수집·저장합니다. 미사용이면 Enter)")
     rabbit_host = input("RabbitMQ 호스트/IP: ").strip()
     rabbit_user = ""
     rabbit_password = ""
     rabbit_vhost = "/"
-    rabbit_queue = "cto.openstack.notifications"
+    previous_queue = current_env().get('RABBIT_QUEUE') or ''
+    rabbit_queue = previous_queue if previous_queue.startswith('cto.dashboard.') else ("cto.dashboard." + uuid.uuid4().hex[:12])
+    rabbit_port, rabbit_exchanges, rabbit_tls = "5672", "", "false"
     if rabbit_host:
         rabbit_user = input("RabbitMQ 사용자명: ").strip()
         rabbit_password = getpass.getpass("RabbitMQ 비밀번호: ")
         rabbit_vhost = input("RabbitMQ vhost [/]: ").strip() or "/"
-        rabbit_queue = input("알림 queue [cto.openstack.notifications]: ").strip() or "cto.openstack.notifications"
+        rabbit_port = input("RabbitMQ 포트 [5672]: ").strip() or "5672"
+        if not rabbit_port.isdigit() or not 1 <= int(rabbit_port) <= 65535:
+            raise SystemExit("올바른 RabbitMQ 포트가 필요합니다.")
+        rabbit_tls = "true" if input("RabbitMQ TLS 사용? [y/N]: ").strip().lower() == 'y' else "false"
+        print("운영 큐를 공유하면 로그가 나뉩니다. 이 설치 전용 큐를 생성합니다: " + rabbit_queue)
+        rabbit_exchanges = input("알림이 발행되는 기존 exchange 이름 (쉼표 구분, 예: nova,neutron,keystone): ").strip()
+        if not rabbit_user or not rabbit_password or not rabbit_exchanges:
+            raise SystemExit("RabbitMQ 사용자·암호·exchange 이름은 필수입니다.")
 
     clouds = {}
     profiles = {}
@@ -90,9 +103,11 @@ def main():
         if urlparse(auth_url).scheme not in ("http", "https") or not urlparse(auth_url).netloc:
             raise SystemExit("올바른 Keystone http(s) URL을 입력하세요.")
         username = input("사용자 이름: ").strip()
-        password = getpass.getpass("비밀번호/application credential: ")
+        password = getpass.getpass("OpenStack 사용자 비밀번호: ")
         project = input("프로젝트 이름: ").strip()
         project_id = input("프로젝트 ID (선택): ").strip()
+        user_domain = input("사용자 도메인 [Default]: ").strip() or 'Default'
+        project_domain = input("프로젝트 도메인 [Default]: ").strip() or 'Default'
         region = input("Region [RegionOne]: ").strip() or "RegionOne"
         if not username or not password or not project:
             raise SystemExit("사용자 이름, 비밀번호, 프로젝트 이름은 필수입니다.")
@@ -102,8 +117,8 @@ def main():
                 "username": username,
                 "password": password,
                 "project_name": project,
-                "user_domain_name": "Default",
-                "project_domain_name": "Default",
+                "user_domain_name": user_domain,
+                "project_domain_name": project_domain,
             },
             "region_name": region,
             "interface": "public",
@@ -121,15 +136,20 @@ def main():
         "QWEN_API_MODEL": model,
         "CTO_EMBED_URL": embed_url.rstrip("/"),
         "CTO_EMBED_MODEL": embed_model,
+        "CTO_EMBED_LOCAL": "true" if local_embed else "false",
         "RABBIT_HOST": rabbit_host,
-        "RABBIT_PORT": "5672",
+        "RABBIT_PORT": rabbit_port,
         "RABBIT_USER": rabbit_user,
         "RABBIT_PASSWORD": rabbit_password,
         "RABBIT_VHOST": rabbit_vhost,
         "RABBIT_QUEUE": rabbit_queue,
+        "RABBIT_TLS": rabbit_tls,
+        "RABBIT_EXCHANGES": rabbit_exchanges,
+        "RABBIT_ROUTING_KEYS": "notifications.info,notifications.warn,notifications.error,versioned_notifications.info,versioned_notifications.warn,versioned_notifications.error",
+        "RABBIT_DECLARE_QUEUE": "true",
     }
     if clouds:
-        chosen = input("기본 OpenStack 프로필 " + str(list(clouds)) + ": ").strip()
+        chosen = input("기본 OpenStack 프로필 " + str(list(clouds)) + " [" + next(iter(clouds)) + "]: ").strip() or next(iter(clouds))
         if chosen not in clouds:
             raise SystemExit("목록에 있는 프로필 이름을 입력하세요.")
         CLOUD_FILE.write_text(

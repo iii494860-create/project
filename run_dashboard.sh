@@ -10,9 +10,7 @@ if [ ! -f "$ROOT/.env" ]; then
   exit 1
 fi
 cd "$ROOT"
-set -a
-. "$ROOT/.env"
-set +a
+. "$ROOT/env.sh"
 "$ROOT/.venv/bin/python" "$ROOT/sync_openstack_config.py"
 if [ -f "$ROOT/.qwen_api_key" ]; then
   export QWEN_API_KEY="$(cat "$ROOT/.qwen_api_key")"

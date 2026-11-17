@@ -256,7 +256,7 @@ cto:condition a owl:DatatypeProperty ;
 
 cto:ruleType a owl:DatatypeProperty ;
     rdfs:label "규칙 종류"@ko ;
-    rdfs:comment "filter: 이벤트 하나가 filter 를 모두 만족 / threshold: groupBy 값별로 window 안 건수 ≥ threshold / sequence: 같은 groupBy 값에서 sequenceStep 순서대로 발생 / score: groupBy 값별 riskScore 합 ≥ threshold"@ko ;
+    rdfs:comment "filter: 이벤트 하나가 filter 를 모두 만족 / threshold: groupBy 값별로 window 안 건수 ≥ threshold / sequence: 같은 groupBy 값에서 sequenceStep 순서대로 발생 / appcredential_sequence: 실패 반복 후 성공과 같은 사용자·IP의 자격증명 발급 연계 / score: groupBy 값별 riskScore 합 ≥ threshold"@ko ;
     rdfs:domain cto:DetectionRule ; rdfs:range xsd:string .
 
 cto:filter a owl:DatatypeProperty ;
@@ -311,6 +311,9 @@ cto:investigateWith a owl:ObjectProperty ;
     rdfs:comment "주어는 Technique 또는 BehaviorClass"@ko .
 cto:recommendedResponse a owl:ObjectProperty ;
     rdfs:label "권고 대응"@ko ; rdfs:domain cto:Technique ; rdfs:range cto:ResponseAction .
+cto:ruleResponse a owl:ObjectProperty ;
+    rdfs:label "탐지 규칙별 대응"@ko ; rdfs:domain cto:DetectionRule ; rdfs:range cto:ResponseAction .
+
 cto:implements a owl:ObjectProperty ;
     rdfs:label "해당 방어 기법"@ko ; rdfs:domain cto:ResponseAction ; rdfs:range cto:DefensiveTechnique .
 
@@ -434,3 +437,6 @@ cto:involvesActor a owl:ObjectProperty ;
     rdfs:label "관련 행위자"@ko ; rdfs:domain cto:Incident ; rdfs:range cto:Actor .
 cto:accumulatedRisk a owl:DatatypeProperty ;
     rdfs:label "누적 위험 점수"@ko ; rdfs:domain cto:Incident ; rdfs:range xsd:integer .
+
+cto:implementedBy a owl:ObjectProperty ;
+    rdfs:domain cto:DetectionStrategy ; rdfs:range cto:DetectionRule .

@@ -1,43 +1,8 @@
-# OpenStack 위협 분석 대시보드 설치 가이드
+# OpenStack 보안 분석 대시보드
 
-이 저장소는 대시보드 코드와 온톨로지 원본·생성 도구를 제공합니다. 저장소는 공개이므로 GitHub 로그인 없이 clone할 수 있습니다. 새 PC 설치는 **운영 데이터 복사 방식이 아니라 온톨로지와 벡터 데이터를 새로 만드는 방식**입니다.
+새 Ubuntu PC에서 설치하고 **서비스 주소와 인증정보를 입력하면** 새 OpenStack 알림 수신, 온톨로지 탐지, Neo4j 저장, Qwen 분석을 사용할 수 있는 프로젝트입니다. GitHub 로그인이나 기존 PC의 DB 백업은 필요하지 않습니다.
 
-설치 전 확인 사항은 [INSTALL_NOTES.md](INSTALL_NOTES.md)를 참고하세요.
-
-## 구성
-
-```mermaid
-flowchart LR
-  Browser[사용자 브라우저] --> Dashboard[Streamlit 대시보드]
-  Dashboard --> Qwen[Qwen API]
-  Dashboard --> OpenStack[OpenStack API<br/>읽기 전용 조회]
-  Dashboard -. 선택 .-> Rabbit[RabbitMQ 알림 queue]
-  Docs[OpenStack 문서] --> Builder[온톨로지 생성]
-  Schema[저장소의 TTL·매핑 파일] --> Builder
-  Builder --> Neo4j[(Neo4j graph DB)]
-  Embed[Ollama 호환 임베딩 API] --> Neo4j
-  Dashboard --> Neo4j
-```
-
-- **대시보드**: Streamlit 앱과 Qwen 질의·분석 코드
-- **지식 그래프**: Docker Neo4j에 OpenStack·보안 온톨로지를 저장
-- **임베딩**: 임베딩 API가 만든 4096차원 벡터를 Neo4j 벡터 색인에 저장
-- **OpenStack 조회**: 설치 때 고른 cloud 프로필 하나를 사용하며 읽기 전용 CLI 허용 목록으로 조회
-- **RabbitMQ**: 설정한 경우 알림 queue 상태를 확인. OpenStack 알림 발행이나 queue 생성은 별도 서버 설정
-
-## 설치 전 준비
-
-- Ubuntu 22.04 이상, Git, 인터넷 연결, 시스템 패키지를 설치할 `sudo` 권한
-- Qwen API 주소와 사용할 모델. API key가 필요한 서버라면 해당 key
-- Ollama 호환 임베딩 API 주소와 모델. `/api/embed`를 제공하고 모델이 **4096차원** 벡터를 반환해야 함
-- OpenStack을 조회할 경우 Keystone v3 주소, 사용자명·비밀번호, 프로젝트 정보 및 필요한 조회 권한
-- RabbitMQ 알림 queue를 조회할 경우 브로커 주소와 계정. 이 항목은 선택이며 포트 기본값은 5672
-
-Qwen API와 임베딩 API는 설치 PC에서 접속 가능해야 합니다. 이 저장소는 두 API 서버나 OpenStack 환경 자체를 설치하지 않습니다.
-
-## 새 PC에 설치
-
-먼저 Git을 준비하고 공개 저장소를 clone합니다.
+## 설치
 
 ```bash
 sudo apt update
@@ -47,77 +12,119 @@ cd project
 ./setup.sh
 ```
 
-`setup.sh`가 Ubuntu 패키지 저장소를 설정하고 Python 가상환경, Python 패키지, Docker Engine/Compose가 없으면 설치합니다. Docker 서비스를 시작한 다음 설정 질문을 표시합니다. 시스템 패키지와 Docker 설치에는 `sudo` 권한이 필요합니다.
+Ubuntu 22.04/24.04와 sudo 권한, 인터넷 연결이 필요합니다. Python 가상환경·패키지, Docker·Compose, Neo4j를 설치합니다. 임베딩 서버도 로컬 자동 설치를 선택할 수 있습니다. 로컬 임베딩은 큰 모델을 내려받으므로 **RAM 16GB 이상, 여유 디스크 30GB 이상을 권장**하며, CPU에서는 첫 색인 생성에 시간이 걸립니다. 기존 임베딩 서버를 쓰면 설치 PC의 자원 부담을 줄일 수 있습니다.
 
-### 설치 중 입력할 값
+Qwen 대화 모델은 입력한 외부 API 서버를 사용합니다. 현재 분석 하네스는 `/v1/chat/completions`와 `/api/show`의 `thinking.values` ON/OFF 정보를 지원하는 Ollama 계열 서버를 요구합니다. 일반 OpenAI 호환 주소만 제공하는 서버는 그대로 연결되지 않을 수 있으며 설치 중 호환성을 검사합니다. OpenStack 자체와 원격 RabbitMQ는 기존 환경을 연결합니다.
 
-1. **Neo4j 비밀번호**: 첫 설치 때 입력합니다. 8자 이상이어야 하며 `$`, 백틱, 백슬래시는 사용할 수 없습니다. 비워 두면 임의의 비밀번호를 생성해 `.env`에 저장합니다. 초기 사용자는 Neo4j Docker의 제한에 따라 `neo4j`로 고정됩니다.
-2. **대시보드 접속 IPv4**: 같은 PC에서만 쓸 경우 기본값 `127.0.0.1`. 다른 PC에서 접속하려면 대시보드 PC의 LAN 주소
-3. **Qwen API**: OpenAI 호환 기본 URL(`/v1` 포함), 모델명, 필요한 경우 API key
-4. **임베딩 API**: 기본 URL(`/api/embed`는 제외), 모델명. 기본값은 `http://127.0.0.1:11434`, `qwen3-embedding:8b`
-5. **RabbitMQ**: 알림 queue를 쓸 경우 host, 사용자·비밀번호, vhost, queue. 사용하지 않으면 host 입력을 비움
-6. **OpenStack**: 최대 세 Keystone v3 프로필의 주소, 사용자명·비밀번호, 프로젝트명, 선택적 프로젝트 ID, 리전. 현재 대화형 설정은 비밀번호 인증과 `Default` 도메인을 사용합니다. 사용하지 않는 프로필은 주소를 비움
-7. 등록한 OpenStack 프로필 중 기본 프로필 하나 선택
+## 설치할 때 입력하는 정보
 
-설치 중 입력한 주소는 `.env`와 `clouds.yaml`에 저장되어 대시보드가 해당 서비스에 연결할 때 사용합니다. 주소만으로 OpenStack이나 인증이 필요한 API에 로그인할 수는 없으므로 계정 인증정보도 입력해야 합니다.
+| 항목 | 입력할 내용 |
+|---|---|
+| Neo4j | 첫 설치 비밀번호 8자 이상. Enter를 누르면 임의 생성하여 `.env`에 저장 |
+| 대시보드 | 이 PC의 접속 IP. 같은 PC에서만 쓰면 `127.0.0.1` |
+| Qwen | `http(s)://서버:포트/v1`, 모델 이름, 필요한 경우 API key |
+| 임베딩 | 기본값은 로컬 자동 설치. 기존 서버를 쓰면 Ollama API 기본 주소와 4096차원 모델 |
+| RabbitMQ | 호스트, 포트, 사용자, 비밀번호, vhost, TLS 여부, **실제 알림 exchange 이름** |
+| OpenStack | Keystone v3 URL, 사용자·비밀번호, 프로젝트, 사용자·프로젝트 도메인, 리전. 최대 3개 프로필 저장, 기본 조회 프로필 1개 선택 |
 
-Neo4j 비밀번호 입력은 저장소의 **첫 설치 시에만** 표시됩니다. 기존 `.env`와 Neo4j 데이터 볼륨이 있는 환경에서 비밀번호를 바꾸려면 `.env` 값만 고치면 안 됩니다. Neo4j는 초기화된 데이터 볼륨의 인증 정보를 유지하므로, 기존 DB 비밀번호 변경 절차를 사용해야 합니다.
+RabbitMQ를 입력하지 않으면 실시간 수집을 활성화하지 않습니다. OpenStack API 조회 인증과 RabbitMQ 알림 수신 인증은 서로 별개입니다. 세 OpenStack 프로필 저장이 세 환경의 알림을 자동 수집한다는 뜻은 아닙니다. 현재 자동 수집은 설정한 RabbitMQ 브로커 한 곳에서 지정한 exchange들을 구독합니다.
 
-### 기존 환경의 데이터까지 이식
+주소는 설치 PC에서 도달 가능한 주소여야 합니다. 원격 서비스 주소에 `127.0.0.1`을 넣으면 설치 PC 자신을 가리킵니다.
 
-저장소 루트에 `migration_bundle.tar.gz`가 있으면 `./setup.sh`가 새 Neo4j에 백업을 복원합니다. 로그(`ObservedEvent`), 경보·사건, 온톨로지, 저장된 임베딩을 가져오며, 임베딩 캐시로 색인을 확인하므로 복원 과정에서 임베딩 API를 다시 호출하지 않습니다. 대상 Neo4j에 노드가 이미 있으면 덮어쓰지 않고 중단합니다.
+## 포함된 지식과 자동 검증
 
-현재 제공된 백업은 **2026-11-16 12:09 UTC 시점**의 스냅샷입니다. 이 백업에는 실제 로그와 사용자·자원 식별자가 포함될 수 있어 공개 저장소에 올리지 않으며 Git에서도 제외됩니다. 새 PC에서는 공개 저장소를 clone한 뒤 이 파일을 별도의 신뢰 가능한 경로로 프로젝트 루트에 복사하고 `./setup.sh`를 실행해야 합니다. 백업 시각 이후에 발생한 로그는 포함되지 않으며, 실시간 로그 수신 기능도 별도로 구성해야 합니다.
+`knowledge/`에는 검증 기준이 고정된 온톨로지, 공개 문서, KISA 공지 자료와 SHA-256 목록이 들어 있습니다. 설치마다 외부 사이트의 최신 자료 일부만 가져와 지식이 줄어드는 일을 방지합니다.
 
-`migration_bundle.tar.gz`가 없는 clone에서는 기존 로그 데이터를 가져오지 않고, 외부 문서와 소스 자료로 온톨로지만 새로 생성합니다.
+| 지식 종류 | 포함 수량 |
+|---|---:|
+| 온톨로지 지식 노드 | 971 |
+| 온톨로지 클래스 | 36 |
+| 온톨로지 지식 관계 | 3,714 |
+| KISA 공지 | 2,814 |
+| KISA CVE | 17,078 |
+| 공지 → CVE 관계 | 17,963 |
 
-**자동 설정되는 범위**는 대시보드가 바인딩할 IP와 애플리케이션의 서비스 주소입니다. OS 네트워크 인터페이스, DNS, 라우팅, 방화벽 규칙, 원격 OpenStack/RabbitMQ 알림 설정은 자동으로 바꾸지 않습니다. 해당 서비스까지의 네트워크 경로와 방화벽은 관리자 쪽에서 준비해야 합니다.
+Cinder 확장, Application Credential 탐지, ATT&CK 기법·전술·완화책, D3FEND, OpenStack 필드·이벤트·조사 명령도 포함합니다. KISA 공지의 검증 상태와 CVE 연결 제한도 보존합니다. **공지가 특정 CVE를 언급했다는 사실은 해당 OpenStack에서 공격이 발생했다는 뜻이 아닙니다.**
 
-### 설치 단계에서 자동 처리하는 작업
+공개 원문 문서는 `knowledge/public_docs.tar.gz`에서 `docs/`로 준비합니다. 이것은 설치용 공개 지식 자료이며 운영 DB 백업이 아닙니다. 출처는 [knowledge/manifest.json](knowledge/manifest.json)과 압축 파일의 `docs/sources.csv`에 기록되어 있습니다. 원문 자료에는 각 출처의 이용 조건이 적용됩니다.
 
-1. Docker Neo4j를 시작하고 연결을 확인
-2. 외부 문서를 내려받아 저장소의 `schema.ttl`, `openstack_mapping.ttl`, 매핑 자료와 함께 온톨로지 생성
-3. 온톨로지를 Neo4j에 적재
-4. 임베딩 API를 호출해 벡터와 `knowledge_embedding` 색인 생성
-5. 대시보드 실행
+검색 대상 803개 노드의 벡터는 설치 중 `qwen3-embedding:8b` 또는 지정한 동일 차원의 모델로 생성합니다. `knowledge_embedding` 색인과 모델·문장 해시·차원을 검사하며, 질문 검색 때도 **같은 임베딩 서버가 계속 실행 중이어야 합니다**. KISA 공지는 별도 공지/CVE 검색 경로를 사용합니다.
 
-문서 다운로드, Docker 이미지 다운로드, Qwen·임베딩·OpenStack API 접속을 위해 네트워크가 필요합니다. 설치가 끝나면 터미널에서 대시보드가 실행 중입니다. 종료는 `Ctrl+C`입니다.
+온톨로지 식별자·속성·관계, 공지/CVE 식별자·연결, 벡터가 빠졌거나 API 호출이 실패하면 설치 성공으로 표시하지 않습니다. 이전 환경의 실제 로그, 사용자·프로젝트 기록, 경보·사건, 보고서, 사이트별 정상 예외/허용 목록, 비밀번호는 배포하지 않습니다. 새 로그가 들어오면 해당 환경의 기록이 생성됩니다.
 
-## 접속과 재실행
+## 설치 순서와 실행 구조
 
-- 같은 PC에서: `http://127.0.0.1:8501`
-- 다른 PC에서: `http://<대시보드-PC의-LAN-IP>:8501`
-- 원격 접속을 위해 대시보드 PC 방화벽에서 TCP 8501을 허용해야 합니다.
-- 나중에 대시보드만 다시 시작할 때는 프로젝트 폴더에서 `./run_dashboard.sh`를 실행합니다. 설치를 반복할 때는 설정과 온톨로지 적재도 다시 수행될 수 있습니다.
+1. 시스템 패키지와 Python 의존성을 설치하고 접속 정보를 입력합니다.
+2. Docker Neo4j를 시작하고 인증을 확인합니다.
+3. Qwen을 실제 호출하고, 설정한 OpenStack의 인증을 확인합니다.
+4. 로컬 임베딩을 선택했다면 Ollama와 모델을 설치합니다.
+5. 전체 온톨로지·KISA·CVE를 적재하고 임베딩과 색인을 만듭니다.
+6. 지식 누락 검사를 통과한 뒤 RabbitMQ 전용 큐를 만들고 서비스와 타이머를 활성화합니다.
+7. 대시보드를 시작합니다.
 
-Neo4j Web UI는 `http://127.0.0.1:7474`, Bolt 연결은 `bolt://127.0.0.1:7687`입니다. Neo4j 포트는 localhost에만 열리고 데이터는 Docker volume `neo4j_data`에 저장됩니다. 대시보드용 8501 포트와 Neo4j의 7474·7687 포트가 이미 사용 중이면 설치 전에 충돌을 해결하세요.
+```mermaid
+flowchart LR
+  OS[OpenStack 알림 발행] --> MQ[RabbitMQ exchange]
+  MQ --> Queue[설치별 전용 큐]
+  Queue --> Consumer[수신 서비스]
+  Consumer --> Log[로컬 JSONL]
+  Log --> Engine[온톨로지 탐지·저장]
+  Engine --> DB[(Neo4j)]
+  Knowledge[배포 지식·문서] --> DB
+  Embedding[임베딩 API] --> DB
+  DB --> UI[대시보드]
+  UI --> Qwen[Qwen API]
+  UI --> Embedding
+  UI --> OpenStackAPI[OpenStack 읽기 전용 조회]
+```
 
-## 설정·데이터 위치
+알림은 로컬 파일에 기록·동기화한 후 MQ에 수신 확인합니다. 탐지 타이머가 새 로그를 분석해 Neo4j에 저장합니다. 동일 메시지를 다시 받아도 이벤트와 경보가 중복 생성되지 않으며 미분류 이벤트도 보존합니다. 형식 오류가 있는 알림은 `real_logs/rejected_notifications.jsonl`에 보관합니다.
 
-- `.env`: 대시보드 주소, API 주소와 모델, Neo4j 설정, 선택된 OpenStack 정보, 선택적 RabbitMQ 설정
-- `clouds.yaml`: OpenStack 프로필의 인증정보
-- `.qwen_api_key`: 입력한 Qwen API key
-- `.venv/`: Python 패키지
-- `docs/`, `out/ontology_all.ttl`: 내려받은 문서와 생성된 온톨로지
-- `embeddings_cache.jsonl`: 재실행 시 같은 텍스트의 임베딩을 재사용하는 캐시
-- Docker volume `neo4j_data`: 온톨로지와 벡터 색인을 포함한 Neo4j 데이터
+## 원격 OpenStack/RabbitMQ에서 준비할 것
 
-설정 파일과 생성 데이터는 `.gitignore`로 Git에서 제외됩니다. 공개 저장소에는 원본 스키마·매핑·프로그램만 올라갑니다. 따라서 새 PC 설치는 현재 PC의 관측 이벤트, 경보, 로그, Neo4j 데이터를 복사하지 않습니다.
+주소·인증정보를 입력해도 원격 OpenStack의 알림 발행 설정까지 변경되지는 않습니다. **알림이 이미 발행되고 있고 구독 권한이 있어야 새 로그가 들어옵니다.**
 
-OpenStack 주소를 변경하려면 `.env`의 `OPENSTACK_AUTH_URL`을 바꾸고 대시보드를 다시 시작합니다. 인증정보와 프로필을 변경할 때는 로컬 `clouds.yaml`을 수정합니다. 설정을 새로 입력하려면 `./.venv/bin/python configure.py`를 실행합니다.
+- 관련 서비스에 oslo.messaging 알림이 활성화되어 있어야 합니다. 설치 방식에 따라 Kolla 설정 또는 각 서비스 설정을 관리자가 변경합니다.
+- RabbitMQ 계정에는 해당 vhost 접근, 기존 알림 exchange 읽기, 설치 전용 큐 생성·바인딩·소비 권한이 필요합니다.
+- 관리자는 `rabbitmqctl list_exchanges -p <vhost> name type`, `rabbitmqctl list_bindings -p <vhost>` 등으로 실제 exchange와 routing key를 확인할 수 있습니다. 발행하지 않는 exchange를 입력하면 연결 검사가 실패합니다.
+- 기본 구독 키는 `notifications.info/warn/error`, `versioned_notifications.info/warn/error`입니다. 실제 발행 키가 다르면 `.env`의 `RABBIT_ROUTING_KEYS`를 변경합니다.
+- **기존 운영 큐를 공유하면 메시지를 나눠 소비합니다.** 설치 프로그램은 무작위 이름의 전용 큐를 생성합니다. 기존 운영 환경의 수집을 방해하지 않도록 이 방식을 사용하세요.
+- 서버·VM·방화벽에서 RabbitMQ와 API 포트로 통신할 수 있어야 합니다. 사설 인증서는 신뢰 저장소에 등록하거나 RabbitMQ의 `RABBIT_CA_FILE`을 지정합니다.
 
-## 문제 해결
+설치 과정의 바인딩 확인은 구독 가능한지 검사합니다. 실제 발행 여부는 OpenStack에서 테스트 작업 후 대시보드의 새 로그를 확인해야 합니다. 배포판·서비스에 따른 알림 설정은 포함된 공식 문서 `docs/logs/`를 참고하세요.
 
-- **sudo 권한 오류**: 시스템 관리자 계정으로 `./setup.sh`를 실행해야 합니다.
-- **Neo4j 포트 사용 중**: 7474 또는 7687을 점유한 기존 Neo4j를 확인하세요. 기존 서비스를 사용 중인 PC에 무심코 설치하면 충돌할 수 있습니다.
-- **임베딩 연결/차원 오류**: URL이 기본 주소인지, `/api/embed`가 제공되는지, 모델이 준비됐고 4096차원인지 확인하세요.
-- **OpenStack 401/403**: Keystone URL, 계정·프로젝트 정보와 조회 권한을 확인하세요.
-- **RabbitMQ 연결 실패**: 주소·계정·vhost·queue가 맞는지 확인하고, RabbitMQ 관리자가 queue 및 OpenStack 알림 전달을 설정했는지 확인하세요.
-- **문서 다운로드 실패**: 외부 네트워크와 DNS 접근을 확인한 뒤 `./setup_knowledge.sh`를 다시 실행하세요.
+## 실행·상태 확인
 
-## 저장소 주요 파일
+```bash
+./run_dashboard.sh
+# 로그 수집과 탐지는 부팅 시 자동 실행됩니다.
+systemctl status cto-openstack-consumer cto-live-detection.timer cto-binding-check.timer
+journalctl -u cto-openstack-consumer -u cto-live-detection --since '10 minutes ago'
+```
 
-- `dashboard_app.py`, `cto_*.py`, `qwen_*.py`: 대시보드·분석·질의 코드
-- `schema.ttl`, `openstack_mapping.ttl`, `d3fend_mitigation_map.csv`: 온톨로지 원본과 매핑
-- `download_docs.sh`, `build_ontology.py`, `load_neo4j.py`, `embed_knowledge.py`: 다운로드·생성·적재·임베딩
-- `configure.py`, `setup.sh`, `start_services.sh`, `run_dashboard.sh`: 설정과 설치·실행
+접속 주소는 `http://<입력한 대시보드 IP>:8501`입니다. 대시보드는 실행 터미널을 종료하면 멈추므로 다시 `./run_dashboard.sh`를 실행하세요. Neo4j·로컬 임베딩과 수집 서비스는 별도로 실행됩니다. 서비스 이름이 다른 설치에서 사용 중이면 덮어쓰지 않고 중단합니다.
+
+```bash
+# 지식만 다시 확인 (암호를 shell 명령으로 실행하지 않는 설정 로더)
+ROOT="$PWD"
+. ./env.sh
+.venv/bin/python knowledge_assets.py verify
+```
+
+설정 파일은 `.env`, `clouds.yaml`, `.qwen_api_key`에 저장되며 Git에서 제외합니다. 값을 수정했다면 대시보드를 다시 실행하고, 수집 설정을 수정했을 때는 `sudo systemctl restart cto-openstack-consumer`를 실행하세요. 이미 초기화한 Neo4j의 비밀번호는 `.env`만 바꿔도 변경되지 않습니다.
+
+## 지식 갱신과 운영 주의
+
+포함 자료의 기준일은 2026-11-17입니다. 최신 공지 수집 도구도 포함합니다. 자동 설치는 검증된 배포 지식으로 시작하며, 외부 공지 갱신은 관리자가 필요할 때 실행합니다.
+
+```bash
+ROOT="$PWD"
+. ./env.sh
+.venv/bin/python kisa_rss_collector.py
+.venv/bin/python cto_kisa_detail.py --limit 30
+.venv/bin/python cto_kisa_ontology.py --sync
+```
+
+ATT&CK·OpenStack 문서를 갱신해 온톨로지를 다시 만드는 도구도 유지합니다. 배포된 `knowledge/`를 갱신할 때는 노드·관계 변화와 검색 색인을 함께 검증해야 합니다. 현재 검증기는 포함된 지식이 임의로 사라진 경우 실패합니다.
+
+운영 전 주의사항과 검증 범위는 [INSTALL_NOTES.md](INSTALL_NOTES.md)를 확인하세요.

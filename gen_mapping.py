@@ -486,7 +486,7 @@ for rid, label, cmd, rb, ps, d3, st in RESP:
     node(f"kb:resp_{rid}", pairs)
 RESP_LINK = {"T1110": ["disable_user"], "T1078_004": ["disable_user"], "T1098_003": ["remove_role"], "T1136_003": ["disable_created_user"],
              "T1578_002": ["stop_server"], "T1496_001": ["stop_server"], "T1686_001": ["delete_sg_rule", "unset_fip"],
-             "T1537": ["image_unshare", "image_deactivate"], "T1525": ["image_deactivate"], "T1098_001": ["keypair_delete"],
+             "T1537": ["image_unshare", "image_deactivate"], "T1525": ["image_deactivate"],
              "T1110_001": ["disable_user"]}
 for t, rs in RESP_LINK.items():
     out.append(f"kb:{t} cto:recommendedResponse {objs(*[f'kb:resp_{r}' for r in rs])} .\n")
@@ -499,6 +499,11 @@ AL = [("svc_nova", "service_account", "nova"), ("svc_neutron", "service_account"
 for aid, kind, val in AL:
     node(f"kb:allow_{aid}", [("a", "cto:AllowlistEntry"), ("cto:entryKind", lit(kind)), ("cto:entryValue", lit(val)),
                              ("cto:verificationStatus", lit(LOG)), ("rdfs:comment", lit("클러스터의 실제 서비스 계정·관리자 IP·admin 역할 ID 로 교체 (allowlist.json 으로도 지정 가능)", "ko"))])
+
+from appcredential_ontology import mapping_ttl
+out.append(mapping_ttl())
+from pathlib import Path
+out.append(Path(__file__).with_name("cinder_mapping.ttl").read_text(encoding="utf-8"))
 
 open("openstack_mapping.ttl", "w", encoding="utf-8").write("\n".join(out))
 print("events", len(EV), "fields", len(F), "behaviors", len(BC), "rules", len(RULES))
