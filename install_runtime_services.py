@@ -25,6 +25,13 @@ def unit_texts():
     }
 
 
+def check_ownership(units):
+    for name in units:
+        dest = Path('/etc/systemd/system') / name
+        if dest.exists() and not dest.read_text().startswith(PREFIX):
+            raise SystemExit(f'{name}: 다른 설치가 사용 중입니다. 기존 서비스를 덮어쓰지 않습니다.')
+
+
 def main():
     from runtime_env import load
     load()
@@ -32,10 +39,7 @@ def main():
         print('RabbitMQ 미설정: 실시간 로그 수집은 활성화되지 않았습니다.')
         return
     units = unit_texts()
-    for name in units:
-        dest = Path('/etc/systemd/system') / name
-        if dest.exists() and not dest.read_text().startswith(PREFIX):
-            raise SystemExit(f'{name}: 다른 설치가 사용 중입니다. 기존 서비스를 덮어쓰지 않습니다.')
+    check_ownership(units)
     subprocess.run([str(ROOT / '.venv/bin/python'), str(ROOT / 'live_notification_consumer.py'), '--check'], check=True)
     sudo = [] if os.geteuid() == 0 else ['sudo']
     with tempfile.TemporaryDirectory(prefix='cto-units-') as work:
@@ -44,7 +48,9 @@ def main():
             path.write_text(PREFIX + content)
             subprocess.run(sudo + ['install', '-m', '644', str(path), '/etc/systemd/system/' + name], check=True)
     subprocess.run(sudo + ['systemctl', 'daemon-reload'], check=True)
-    subprocess.run(sudo + ['systemctl', 'enable', '--now', 'cto-openstack-consumer.service', 'cto-live-detection.timer', 'cto-binding-check.timer'], check=True)
+    subprocess.run(sudo + ['systemctl', 'enable', 'cto-openstack-consumer.service', 'cto-live-detection.timer', 'cto-binding-check.timer'], check=True)
+    # enable --now leaves already running processes on the old code/config.
+    subprocess.run(sudo + ['systemctl', 'restart', 'cto-openstack-consumer.service', 'cto-live-detection.timer', 'cto-binding-check.timer'], check=True)
     subprocess.run(sudo + ['systemctl', 'is-active', '--quiet', 'cto-openstack-consumer.service', 'cto-live-detection.timer', 'cto-binding-check.timer'], check=True)
     print('로그 수신 → 온톨로지 탐지 → Neo4j 저장 서비스 활성화 완료')
 

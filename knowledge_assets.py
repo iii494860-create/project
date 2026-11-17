@@ -68,6 +68,7 @@ def import_public(driver, database='neo4j'):
                        rows=data['cves'][start:start+500]).consume()
             for start in range(0, len(data['mentions']), 500):
                 tx.run('UNWIND $rows AS e MATCH(a:KISAAdvisory {sourceId:e[0]}) '
+                       'WHERE coalesce(a.cveLinkBlocked,false) = false '
                        'MATCH(v:KISACVE {cveId:e[1]}) MERGE(a)-[:MENTIONS_CVE]->(v)',
                        rows=data['mentions'][start:start+500]).consume()
             for uri, labels in json.loads((ASSETS / 'extra_labels.json').read_text()).items():
@@ -118,15 +119,18 @@ def verify_graph(driver, database='neo4j', vectors=True):
         articles = set(article_data)
         cves = {r['id'] for r in s.run('MATCH(v:KISACVE) RETURN v.cveId AS id')}
         mentions = {(r['a'],r['v']) for r in s.run('MATCH(a:KISAAdvisory)-[:MENTIONS_CVE]->(v:KISACVE) RETURN a.sourceId AS a,v.cveId AS v')}
+        required_mentions = {tuple(e) for e in public['mentions'] if not article_data.get(e[0], {}).get('cveLinkBlocked')}
         if (not {a['sourceId'] for a in public['advisories']} <= articles or
-                not set(public['cves']) <= cves or not {tuple(e) for e in public['mentions']} <= mentions):
+                not set(public['cves']) <= cves or not required_mentions <= mentions):
             raise ValueError('KISA 공지/CVE/관계 누락')
         for article in public['advisories']:
             found = article_data[article['sourceId']]
             for key in ('title','url','detailText','detailStatus'):
                 if article.get(key) and not found.get(key):
                     raise ValueError('KISA 공지 내용 누락: ' + key)
-        report = dict(data['counts'])
+        report = {'Knowledge': len(actual), 'OntologyClass': len(classes),
+                  'KISAAdvisory': len(articles), 'KISACVE': len(cves),
+                  'MENTIONS_CVE': len(mentions), 'knowledge_relationships': len(edges)}
         if vectors:
             from embed_knowledge import Neo4jSource, collect_targets, KINDS, DIM, EMBED_MODEL, INDEX
             targets, _ = collect_targets(Neo4jSource(driver, database), KINDS)
