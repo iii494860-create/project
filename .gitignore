@@ -21,6 +21,7 @@ agent_test/
 evaluation_results/
 migration_bundle.tar.gz
 migration_bundle/
+.migration_restore/
 normalization_preview/
 docs/
 out/

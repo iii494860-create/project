@@ -89,8 +89,13 @@ finally:
     driver.close()
 PY
 
-echo "=== 3/4 온톨로지 생성·적재 및 벡터 임베딩 ==="
-bash "$ROOT/setup_knowledge.sh"
+if [ -f "$ROOT/migration_bundle.tar.gz" ]; then
+  echo "=== 3/4 기존 Neo4j·로그·임베딩 백업 복원 ==="
+  bash "$ROOT/restore_migration_bundle.sh"
+else
+  echo "=== 3/4 새 온톨로지 생성·적재 및 벡터 임베딩 ==="
+  bash "$ROOT/setup_knowledge.sh"
+fi
 
 echo "=== 4/4 설치 완료 ==="
 echo "대시보드를 시작합니다. 종료하려면 Ctrl+C를 누르세요."
